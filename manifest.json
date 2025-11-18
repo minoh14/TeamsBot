@@ -1,0 +1,43 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "3.0.0",
+  "id": "48c5288c-ae72-4039-ab30-696b6c9d589a",
+  "packageName": "com.echobot",
+  "developer": {
+    "name": "Minoh Kang",
+    "websiteUrl": "https://yourwebsite.com",
+    "privacyUrl": "https://yourwebsite.com/privacy",
+    "termsOfUseUrl": "https://yourwebsite.com/terms"
+  },
+  "name": {
+    "short": "거래선 등록 Bot v3.0.0",
+    "full": "회계거래선 신규 등록 Bot v3.0.0"
+  },
+  "description": {
+    "short": "회계거래선 신규 등록 Bot",
+    "full": "회계거래선을 신규로 등록해주는 Bot입니다."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#FFFFFF",
+  "bots": [
+    {
+      "botId": "48c5288c-ae72-4039-ab30-696b6c9d589a",
+      "scopes": [
+        "personal",
+        "team",
+        "groupchat"
+      ],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": []
+}
