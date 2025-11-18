@@ -1,18 +1,18 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
-  "version": "3.0.0",
-  "id": "48c5288c-ae72-4039-ab30-696b6c9d589a",
-  "packageName": "com.echobot",
+  "version": "4.0.0",
+  "id": "434d6e6f-f985-4b5b-a6f7-9b9fdf2ed963",
+  "packageName": "com.uipath.teamsbot",
   "developer": {
     "name": "Minoh Kang",
-    "websiteUrl": "https://yourwebsite.com",
-    "privacyUrl": "https://yourwebsite.com/privacy",
-    "termsOfUseUrl": "https://yourwebsite.com/terms"
+    "websiteUrl": "https://www.uipath.com/",
+    "privacyUrl": "https://www.uipath.com/legal/trust-and-security/privacy",
+    "termsOfUseUrl": "https://www.uipath.com/legal/trust-and-security/legal-terms"
   },
   "name": {
-    "short": "거래선 등록 Bot v3.0.0",
-    "full": "회계거래선 신규 등록 Bot v3.0.0"
+    "short": "거래선 등록 Bot v4.0.0",
+    "full": "회계거래선 신규 등록 Bot v4.0.0"
   },
   "description": {
     "short": "회계거래선 신규 등록 Bot",
@@ -25,7 +25,7 @@
   "accentColor": "#FFFFFF",
   "bots": [
     {
-      "botId": "48c5288c-ae72-4039-ab30-696b6c9d589a",
+      "botId": "434d6e6f-f985-4b5b-a6f7-9b9fdf2ed963",
       "scopes": [
         "personal",
         "team",
