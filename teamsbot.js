@@ -9,13 +9,14 @@ const MSGQUEUE = require('./msgqueue');
 // 필요한 패키지: npm install botbuilder restify dotenv
 require('dotenv').config();
 const restify = require('restify');
-const { BotFrameworkAdapter, TeamsActivityHandler, TurnContext } = require('botbuilder');
+const { BotFrameworkAdapter, TeamsActivityHandler, TurnContext, MessageFactory } = require('botbuilder');
 
 // 환경 변수 (.env 파일에서 관리)
 const botId = process.env.MicrosoftAppId || '';
 const botPassword = process.env.MicrosoftAppPassword || '';
 const botTenantId = process.env.MicrosoftAppTenantId || '';
 const botPort = process.env.MicrosoftAppPort || 3978;
+const polling_sec = process.env.PollingIntervalSeconds || 3;
 
 // UiPath 인증 토큰 저장 변수
 let token;
@@ -41,29 +42,40 @@ class TeamsBot extends TeamsActivityHandler {
 
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
+            //console.log(`채널 데이터: ${context.activity.channelData ? JSON.stringify(context.activity.channelData) : '없음'}`);
+            //console.log(`텍스트 하이라이트: ${context.activity.textHighlights ? JSON.stringify(context.activity.textHighlights) : '없음'}`);
+            console.log(`텍스트 포맷: '${context.activity.textFormat}'`);
+
             const text = context.activity.text;
+            console.log(`원본 메시지: '${text}'`);
+
             const removedMentionText = TurnContext.removeRecipientMention(context.activity);
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
-
-            console.log(`받은 메시지: ${cleanText}`);
+            console.log(`정제 메시지: '${cleanText}'`);
             
-            if (cleanText.startsWith('(봇메세지)')) {
+            if (cleanText.startsWith('(bot)')) {
                 // 봇메세지는 무시한다.
                 console.log('봇메세지이므로 무시합니다.');
             } else if (cleanText.includes('거래선')) {
                 // 프로세스 시작 메시지가 있으면 프로세스를 실행한다.
-                //await context.sendActivity('(봇메세지)회계거래선을 신규로 추가하는 프로세스를 시작합니다...');
-                //await context.sendActivity('(봇메세지)현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...');
+
+                //await context.sendActivity('(bot)현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...');
+                /*(async () => {
+                    const htmlMessage = MessageFactory.text('<p style="color: red;">(bot) 현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...</p>');
+                    htmlMessage.textFormat = 'xml';
+                    await context.sendActivity(htmlMessage);
+                })();*/
+
                 const chatId = `19:${context.activity.from.aadObjectId}_${context.adapter.settings.appId}@unq.gbl.spaces`;
                 UIPATH.runProcess(
                     token,
                     {
                         'g_chat_id': chatId,
-                        'g_polling_sec': 3
+                        'g_polling_sec': polling_sec
                     }
                 );
             } else {
-                //await context.sendActivity(`Echo: ${cleanText}`);
+                // 메시지 큐에 메시지 추가
                 MSGQUEUE.msgQueue.enqueue(cleanText);
             }
 
@@ -109,10 +121,10 @@ teamsBotServer.listen(botPort, () => {
     })();
 
     console.log(`\nBot ID: ${botId}`);
-    console.log(`Bot Password: ${botPassword}`);
+    console.log(`Bot Password: ${botPassword.substring(0, 8)}...`);
     console.log(`Tenant ID: ${botTenantId}`);
 
-    console.log(`\n${teamsBotServer.name} listening to ${teamsBotServer.url}`);
+    console.log(`\nTeams Bot listening to ${teamsBotServer.url}`);
     console.log('Bot 시작됨. Teams에서 메시지를 보내보세요.\n');
 });
 
