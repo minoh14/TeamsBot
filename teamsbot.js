@@ -17,6 +17,7 @@ const botPassword = process.env.MicrosoftAppPassword || '';
 const botTenantId = process.env.MicrosoftAppTenantId || '';
 const botPort = process.env.MicrosoftAppPort || 3978;
 const polling_sec = process.env.PollingIntervalSeconds || 3;
+const landingMessageFromBot = process.env.LandingMessageFromBot || '';
 
 // UiPath 인증 토큰 저장 변수
 let token;
@@ -61,7 +62,7 @@ class TeamsBot extends TeamsActivityHandler {
 
                 //await context.sendActivity('(bot)현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...');
                 /*(async () => {
-                    const htmlMessage = MessageFactory.text('<p style="color: red;">(bot) 현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...</p>');
+                    const htmlMessage = MessageFactory.text(landingMessageFromBot);
                     htmlMessage.textFormat = 'xml';
                     await context.sendActivity(htmlMessage);
                 })();*/
