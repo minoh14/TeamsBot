@@ -19,9 +19,6 @@ const botPort = process.env.MicrosoftAppPort || 3978;
 const polling_sec = process.env.PollingIntervalSeconds || 3;
 const landingMessageFromBot = process.env.LandingMessageFromBot || '';
 
-// UiPath 인증 토큰 저장 변수
-let token;
-
 // Bot Adapter 생성
 const adapter = new BotFrameworkAdapter({
     appId: botId,
@@ -36,13 +33,50 @@ adapter.onTurnError = async (context, error) => {
     await context.sendActivity('봇에서 에러가 발생했습니다.');
 };
 
+// 현재 대화중인 사용자에게 메시지 보내기
+async function sendMessageToCurrentUser(conversationReference, message) {
+    if (!conversationReference) {
+        console.error('사용자와의 대화 참조 정보가 없습니다.');
+        return;
+    }
+
+    await adapter.continueConversation(conversationReference, async (context) => {
+        await context.sendActivity(message);
+    });
+}
+
+// 1:1 대화를 생성하여 메시지 보내기
+async function createConversationAndSendMessage(userId, message) {
+    const conversationParameters = {
+        isGroup: false,
+        bot: { id: botId },
+        members: [{ id: userId }],
+        tenantId: botTenantId
+    };
+
+    await adapter.createConversation(conversationParameters, async (context) => {
+        await context.sendActivity(message);
+    });
+}
+
 // Teams Bot 클래스
 class TeamsBot extends TeamsActivityHandler {
     constructor() {
         super();
 
+        // UiPath 인증 토큰
+        this.token = null;
+
+        // 봇과 1:1 대화중인 사용자 정보
+        this.conversationReference = null;
+
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
+
+            // 대화 참조 정보 저장
+            this.conversationReference = TurnContext.getConversationReference(context.activity);
+            console.log(`User ID: ${this.conversationReference.user.id}`);
+
             //console.log(`채널 데이터: ${context.activity.channelData ? JSON.stringify(context.activity.channelData) : '없음'}`);
             //console.log(`텍스트 하이라이트: ${context.activity.textHighlights ? JSON.stringify(context.activity.textHighlights) : '없음'}`);
             console.log(`텍스트 포맷: '${context.activity.textFormat}'`);
@@ -61,15 +95,17 @@ class TeamsBot extends TeamsActivityHandler {
                 // 프로세스 시작 메시지가 있으면 프로세스를 실행한다.
 
                 //await context.sendActivity('(bot)현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...');
-                /*(async () => {
+                /* TODO: admin consent 필요
+                (async () => {
                     const htmlMessage = MessageFactory.text(landingMessageFromBot);
                     htmlMessage.textFormat = 'xml';
                     await context.sendActivity(htmlMessage);
-                })();*/
+                })();
+                */
 
                 const chatId = `19:${context.activity.from.aadObjectId}_${context.adapter.settings.appId}@unq.gbl.spaces`;
                 UIPATH.runProcess(
-                    token,
+                    this.token,
                     {
                         'g_chat_id': chatId,
                         'g_polling_sec': polling_sec
@@ -112,9 +148,9 @@ teamsBotServer.use(restify.plugins.bodyParser());
 // Teams Bot 시작
 teamsBotServer.listen(botPort, () => {
     (async () => {
-        token = await UIPATH.getAccessToken();
+        bot.token = await UIPATH.getAccessToken();
 
-        if (token) {
+        if (bot.token) {
             console.log('\nUiPath와의 통신 준비 완료.\n');
         } else {
             throw new Error('\nUiPath 인증 실패로 인해 봇을 시작할 수 없습니다.');
@@ -137,4 +173,33 @@ teamsBotServer.post('/api/messages', async (req, res) => {
 // Teams Bot 헬스체크 엔드포인트
 teamsBotServer.get('/', async (req, res) => {
     res.send('Teams Bot이 실행 중입니다.');
+});
+
+// Teams Bot 메시지 전송 엔드포인트 (특정 사용자)
+// 윤나영씨 userId: ???
+teamsBotServer.post('/api/sendMessage', async (req, res) => {
+    const { userId, message } = req.body;
+
+    if (!userId || !message) {
+        res.status(400);
+        res.send('userId와 message 필드가 필요합니다.');
+        return;
+    }
+
+    await createConversationAndSendMessage(userId, message);
+    res.send(`사용자 ${userId}에게 메시지를 보냈습니다.`);
+});
+
+// Teams Bot 메시지 전송 엔드포인트 (현재 대화중인 사용자)
+teamsBotServer.post('/api/sendMessageToCurrentUser', async (req, res) => {
+    const { message } = req.body;
+
+    if (!message) {
+        res.status(400);
+        res.send('message 필드가 필요합니다.');
+        return;
+    }
+
+    await sendMessageToCurrentUser(bot.conversationReference, message);
+    res.send('현재 대화중인 사용자에게 메시지를 보냈습니다.');
 });
