@@ -165,14 +165,14 @@ teamsBotServer.listen(botPort, () => {
     console.log('Bot 시작됨. Teams에서 메시지를 보내보세요.\n');
 });
 
-// Teams Bot 메시지 엔드포인트
-teamsBotServer.post('/api/messages', async (req, res) => {
-    await adapter.process(req, res, (context) => bot.run(context));
-});
-
 // Teams Bot 헬스체크 엔드포인트
 teamsBotServer.get('/', async (req, res) => {
     res.send('Teams Bot이 실행 중입니다.');
+});
+
+// Teams Bot 메시지 엔드포인트
+teamsBotServer.post('/api/messages', async (req, res) => {
+    await adapter.process(req, res, (context) => bot.run(context));
 });
 
 // Teams Bot 메시지 전송 엔드포인트 (특정 사용자)
@@ -195,11 +195,13 @@ teamsBotServer.post('/api/sendMessageToCurrentUser', async (req, res) => {
     const { message } = req.body;
 
     if (!message) {
+        console.log('message 필드가 없습니다.');
         res.status(400);
         res.send('message 필드가 필요합니다.');
         return;
     }
 
+    console.log(`현재 대화중인 사용자에게 메시지 전송: '${message}'`);
     await sendMessageToCurrentUser(bot.conversationReference, message);
     res.send('현재 대화중인 사용자에게 메시지를 보냈습니다.');
 });
