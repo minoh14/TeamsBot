@@ -17,7 +17,8 @@ const botPassword = process.env.MicrosoftAppPassword || '';
 const botTenantId = process.env.MicrosoftAppTenantId || '';
 const botPort = process.env.MicrosoftAppPort || 3978;
 const polling_sec = process.env.PollingIntervalSeconds || 3;
-const landingMessageFromBot = process.env.LandingMessageFromBot || '';
+const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
+const botMessageSignature = process.env.BotMessageSignature || '(bot)';
 
 // Bot Adapter 생성
 const adapter = new BotFrameworkAdapter({
@@ -75,33 +76,29 @@ class TeamsBot extends TeamsActivityHandler {
 
             // 대화 참조 정보 저장
             this.conversationReference = TurnContext.getConversationReference(context.activity);
-            console.log(`User ID: ${this.conversationReference.user.id}`);
+            //console.log(`User ID: ${this.conversationReference.user.id}`);
 
             //console.log(`채널 데이터: ${context.activity.channelData ? JSON.stringify(context.activity.channelData) : '없음'}`);
             //console.log(`텍스트 하이라이트: ${context.activity.textHighlights ? JSON.stringify(context.activity.textHighlights) : '없음'}`);
             console.log(`텍스트 포맷: '${context.activity.textFormat}'`);
 
             const text = context.activity.text;
-            console.log(`원본 메시지: '${text}'`);
+            //console.log(`원본 메시지: '${text}'`);
 
             const removedMentionText = TurnContext.removeRecipientMention(context.activity);
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
-            console.log(`정제 메시지: '${cleanText}'`);
+            //console.log(`정제 메시지: '${cleanText}'`);
             
-            if (cleanText.startsWith('(bot)')) {
+            if (cleanText.includes(botMessageSignature)) {
                 // 봇메세지는 무시한다.
                 console.log('봇메세지이므로 무시합니다.');
-            } else if (cleanText.includes('거래선')) {
-                // 프로세스 시작 메시지가 있으면 프로세스를 실행한다.
-
-                //await context.sendActivity('(bot)현재 실행중인 프로세스가 있는지 먼저 확인하겠습니다...');
-                /* TODO: admin consent 필요
+            } else if (processTriggerKeywords.some(keyword => cleanText.includes(keyword))) {
+                // 메시지 안에 프로세스 트리거 키워드가 존재하면 이미 실행중인 프로세스가 있는지 먼저 확인한 후 프로세스를 실행한다.
                 (async () => {
-                    const htmlMessage = MessageFactory.text(landingMessageFromBot);
-                    htmlMessage.textFormat = 'xml';
-                    await context.sendActivity(htmlMessage);
+                    const message = MessageFactory.text(`${botMessageSignature} 이미 실행중인 프로세스가 있는지 먼저 확인하겠습니다...`);
+                    message.textFormat = 'plain'; // plain, markdown, xml
+                    await context.sendActivity(message);
                 })();
-                */
 
                 const chatId = `19:${context.activity.from.aadObjectId}_${context.adapter.settings.appId}@unq.gbl.spaces`;
                 UIPATH.runProcess(
@@ -176,7 +173,6 @@ teamsBotServer.post('/api/messages', async (req, res) => {
 });
 
 // Teams Bot 메시지 전송 엔드포인트 (특정 사용자)
-// 윤나영씨 userId: ???
 teamsBotServer.post('/api/sendMessage', async (req, res) => {
     const { userId, message } = req.body;
 
