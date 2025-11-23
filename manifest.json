@@ -1,9 +1,9 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "id": "434d6e6f-f985-4b5b-a6f7-9b9fdf2ed963",
-  "packageName": "com.uipath.teamsbot",
+  "packageName": "com.uipath.teamsapp",
   "developer": {
     "name": "Minoh Kang",
     "websiteUrl": "https://www.uipath.com/",
@@ -11,12 +11,12 @@
     "termsOfUseUrl": "https://www.uipath.com/legal/trust-and-security/legal-terms"
   },
   "name": {
-    "short": "거래처 관리 Agent",
-    "full": "거래처 신규등록 및 수정 Agent"
+    "short": "거래선 관리 Agent",
+    "full": "거래선 신규등록 및 수정 Agent"
   },
   "description": {
-    "short": "거래처 관리 Agent",
-    "full": "거래처를 신규등록하거나 수정해주는 Agent입니다."
+    "short": "거래선 관리 Agent",
+    "full": "거래선을 신규등록하거나 수정해주는 Agent입니다."
   },
   "icons": {
     "outline": "outline.png",

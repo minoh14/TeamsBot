@@ -4,5 +4,5 @@
 
 // 모듈 불러오기
 const UIPATH = require('./uipath');
-const TEAMSBOT = require('./teamsbot');
+const TEAMSAPP = require('./teamsapp');
 const MSGQUEUE = require('./msgqueue');
