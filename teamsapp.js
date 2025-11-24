@@ -73,8 +73,8 @@ class TeamsApp extends TeamsActivityHandler {
             // Get user info
             this.userInfo = await this.getUserInfo(context);
             //console.log(`id: ${this.userInfo.id}`);
-            //console.log(`name: ${this.userInfo.name}`);
-            //console.log(`email: ${this.userInfo.email}`);
+            console.log(`name: ${this.userInfo.name}`);
+            console.log(`email: ${this.userInfo.email}`);
             //console.log(`department: ${this.userInfo.department}`);
             //console.log(`job title: ${this.userInfo.jobTitle}`);
             //console.log(`office location: ${this.userInfo.officeLocation}`);
@@ -106,7 +106,7 @@ class TeamsApp extends TeamsActivityHandler {
                         "g_user_info": {
                             id: this.userInfo.id,
                             name: this.userInfo.name,
-                            //email: this.userInfo.email,
+                            email: this.userInfo.email,
                             //department: this.userInfo.department,
                             //jobTitle: this.userInfo.jobTitle,
                             //officeLocation: this.userInfo.officeLocation
@@ -163,7 +163,6 @@ class TeamsApp extends TeamsActivityHandler {
 
     // Get user info
     async getUserInfo(context) {
-        /*--- Application permission required: User.Read.All ---
 
         const token = await this.getGraphToken();
 
@@ -182,16 +181,17 @@ class TeamsApp extends TeamsActivityHandler {
             id: user.id,
             name: user.displayName,
             email: user.mail || user.userPrincipalName,
-            department: user.department,
-            jobTitle: user.jobTitle,
-            officeLocation: user.officeLocation
+            //department: user.department,
+            //jobTitle: user.jobTitle,
+            //officeLocation: user.officeLocation
         };
-        */
         
+        /*
         return {
             id: context.activity.from.id,
             name: context.activity.from.name
         };
+        */
     }
 
     // Send message to the current user in conversation
