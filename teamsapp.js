@@ -12,11 +12,10 @@ const restify = require('restify');
 const {
     CloudAdapter,
     ConfigurationServiceClientCredentialFactory,
-    createBotFrameworkAuthenticationFromConfiguration,
     TeamsActivityHandler,
     TurnContext,
     MessageFactory,
-    TeamsInfo
+    ConfigurationBotFrameworkAuthentication
 } = require('botbuilder');
 const { Client } = require('@microsoft/microsoft-graph-client');
 const { ClientSecretCredential } = require('@azure/identity');
@@ -31,6 +30,10 @@ const appPort = process.env.MicrosoftAppPort || 3978;
 const polling_sec = process.env.PollingIntervalSeconds || 3;
 const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
 const textFormat = process.env.TextFormat || 'markdown';
+const taskOwnerId = process.env.TaskOwnerId || '';
+const appMessage1 = process.env.AppMessage1 || '';
+const appMessage2 = process.env.AppMessage2 || '';
+const appMessage3 = process.env.AppMessage3 || '';
 
 // Create adapter
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
@@ -41,13 +44,13 @@ const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
     MicrosoftAppPort: appPort
 });
 
-const botFrameworkAuthentication = createBotFrameworkAuthenticationFromConfiguration(null, credentialsFactory);
+const botFrameworkAuthentication = new ConfigurationBotFrameworkAuthentication({}, credentialsFactory);
 const adapter = new CloudAdapter(botFrameworkAuthentication);
 
 // Error handler
 adapter.onTurnError = async (context, error) => {
     console.error(`\n[onTurnError] ${error}`);
-    await context.sendActivity('앱에서 에러가 발생했습니다.');
+    await context.sendActivity(appMessage3);
 };
 
 // Teams App Class
@@ -61,35 +64,41 @@ class TeamsApp extends TeamsActivityHandler {
 
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
-
+            
             // 대화 참조 정보 저장
             this.conversationReference = TurnContext.getConversationReference(context.activity);
-            console.log(`service url: ${this.conversationReference.serviceUrl}`);
+            //console.log(`AAD Object ID: '${context.activity.from.aadObjectId}'`);
 
             // Get user info
             this.userInfo = await this.getUserInfo(context);
-            console.log(`id: ${this.userInfo.id}`);
-            console.log(`name: ${this.userInfo.name}`);
+            //console.log(`id: ${this.userInfo.id}`);
+            //console.log(`name: ${this.userInfo.name}`);
             //console.log(`email: ${this.userInfo.email}`);
             //console.log(`department: ${this.userInfo.department}`);
             //console.log(`job title: ${this.userInfo.jobTitle}`);
             //console.log(`office location: ${this.userInfo.officeLocation}`);
 
+            //DEBUG-----
+            //this.createConversationAndSendMessage(context, taskOwnerId, '윤나영님 안녕하세요? 테스트 메시지입니다.');
+            //DEBUG-----
+
             const text = context.activity.text;
-            console.log(`원본 메시지: '${text}'`);
+            //console.log(`원본 메시지: '${text}'`);
 
             const removedMentionText = TurnContext.removeRecipientMention(context.activity);
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
-            console.log(`정제 메시지: '${cleanText}'`);
+            //console.log(`정제 메시지: '${cleanText}'`);
             
             if (processTriggerKeywords.some(keyword => cleanText.includes(keyword))) {
-                // 메시지 안에 프로세스 트리거 키워드가 존재하면 이미 실행중인 프로세스가 있는지 먼저 확인한 후 프로세스를 실행한다.
-                await this.sendMessageToCurrentUser('_이미 실행중인 프로세스가 있는지 먼저 확인하겠습니다..._');
+                // 메시지 안에 프로세스 트리거 키워드가 존재하면 프로세스를 실행한다.
+
+                await this.sendMessageToCurrentUser(appMessage2);
 
                 UIPATH.runProcess(
                     this.token,
                     {
                         "g_polling_sec": polling_sec,
+                        "g_task_owner_id": taskOwnerId, // 자금팀 업무 담당자
                         "g_user_info": {
                             id: this.userInfo.id,
                             name: this.userInfo.name,
@@ -113,7 +122,7 @@ class TeamsApp extends TeamsActivityHandler {
             const membersAdded = context.activity.membersAdded;
             for (let member of membersAdded) {
                 if (member.id !== context.activity.recipient.id) {
-                    await context.sendActivity('안녕하세요! 저는 거래선 관리 에이전트입니다.');
+                    await context.sendActivity(appMessage1);
                 }
             }
             await next();
@@ -187,7 +196,7 @@ class TeamsApp extends TeamsActivityHandler {
             return;
         }
 
-        console.log(`text: '${text}'`);
+        //console.log(`text: '${text}'`);
 
         const message = MessageFactory.text(text);
         message.textFormat = textFormat;
@@ -202,64 +211,69 @@ class TeamsApp extends TeamsActivityHandler {
     }
 
     // Create conversation and send message to a specific user
-    async createConversationAndSendMessage(userId, text) {
-        const conversationReference = {
-            bot: { id: appId },
-            user: { id: userId },
-            serviceUrl: this.conversationReference.serviceUrl,
-            conversation: {
-                isGroup: false,
-                conversationType: 'personal',
-                tenantId: appTenantId,
-                id: userId
-            }
-        };
-
+    async createConversationAndSendMessage(context, userId, text) {
         try {
+            //console.log(`conversationReference.bot.id: '${this.conversationReference.bot.id}'`);
+            //console.log(`conversationReference.bot.name: '${this.conversationReference.bot.name}'`);
+            //console.log(`conversationReference.serviceUrl: '${this.conversationReference.serviceUrl}'`);
+
+            const appCredentials = new MicrosoftAppCredentials(
+                appId,
+                appPassword,
+                appTenantId
+            );
+
+            const connectorClient = new ConnectorClient(appCredentials, { baseUri: this.conversationReference.serviceUrl });
+
+            const conversationParameters = {
+                isGroup: false,
+                tenantId: appTenantId,
+                bot: {
+                    id: this.conversationReference.bot.id,
+                    name: this.conversationReference.bot.name
+                },
+                members: [
+                    {
+                        id: userId
+                    }
+                ]
+            };
+
+            const response = await connectorClient.conversations.createConversation(conversationParameters);
+
+            const convRef = {
+                activityId: response.activityId,
+                channelId: 'msteams',
+                serviceUrl: this.conversationReference.serviceUrl,
+                conversation: {
+                    id: response.id,
+                    tenantId: appTenantId,
+                    conversationType: 'personal'
+                },
+                bot: {
+                    id: this.conversationReference.bot.id,
+                    name: this.conversationReference.bot.name
+                },
+                user: {
+                    id: userId
+                }
+            };
+
             await adapter.continueConversationAsync(
                 appId,
-                conversationReference,
+                convRef,
                 async (context) => {
-                    const conversationParameters = {
-                        isGroup: false,
-                        channelData: { tenant: { id: appTenantId } },
-                        members: [{ id: userId }]
-                    };
+                    const message = MessageFactory.text(text);
+                    message.textFormat = textFormat;
 
-                    const credentials = new MicrosoftAppCredentials(appId, appPassword);
-                    const connectorClient = new ConnectorClient(credentials, { baseUri: conversationReference.serviceUrl });
-
-                    try {
-                        const conversationResponse = await connectorClient.conversations.createConversation(conversationParameters);
-                        const newConversationReference = {
-                            ...conversationReference,
-                            conversation: {
-                                id: conversationResponse.id,
-                                tenantId: appTenantId
-                            }
-                        };
-
-                        const message = MessageFactory.text(text);
-                        message.textFormat = textFormat;
-
-                        await adapter.continueConversationAsync(
-                            appId,
-                            newConversationReference,
-                            async (newContext) => { await newContext.sendActivity(message); }
-                        );
-                    } catch (createError) {
-                        // If conversation already exists, send message directly
-                        console.log('Conversation already exists. Send message directly:', createError.message);
-
-                        const message = MessageFactory.text(text);
-                        message.textFormat = textFormat;
-                        
-                        await context.sendActivity(message);
-                    }
+                    await context.sendActivity(message);
                 }
             );
+
+            console.log(`사용자 '${userId}'에게 메시지 전송 완료.`);
+
         } catch (error) {
-            console.error('메시지 전송 중 오류 발생:', error.message);
+            console.error(`사용자 '${userId}'에게 메시지 전송 중 오류 발생: ${error}`);
         }
     }
 }
