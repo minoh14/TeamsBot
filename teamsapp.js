@@ -79,10 +79,6 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`job title: ${this.userInfo.jobTitle}`);
             //console.log(`office location: ${this.userInfo.officeLocation}`);
 
-            //DEBUG-----
-            //this.createConversationAndSendMessage(context, taskOwnerId, '윤나영님 안녕하세요? 테스트 메시지입니다.');
-            //DEBUG-----
-
             const text = context.activity.text;
             //console.log(`원본 메시지: '${text}'`);
 
@@ -93,7 +89,6 @@ class TeamsApp extends TeamsActivityHandler {
             if (processTriggerKeywords.some(keyword => cleanText.includes(keyword))) {
                 // 메시지 안에 프로세스 트리거 키워드가 존재하면 프로세스를 실행한다.
 
-                //await this.sendMessageToCurrentUser(appMessage2);
                 await this.sendMessageToCurrentUser(`이전에 요청하신 거래선 등록 작업이 진행중인지 확인중입니다.
 진행중인 작업이 없다면 신규 등록을 지원해 드리겠습니다.
 잠시만 기다려주세요.`);
