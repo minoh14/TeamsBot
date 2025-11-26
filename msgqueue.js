@@ -63,7 +63,7 @@ msgQueueServer.get('/', async (req, res) => {
 
 // Message Queue REST 서버 시작
 msgQueueServer.listen(msgPort, () => {
-    console.log(`\n${msgQueueServer.name} listening to ${msgQueueServer.url}`);
+    console.log(`\nMessage Queue Server listening to ${msgQueueServer.url}`);
     console.log('Message Queue 서버 시작됨.\n');
 });
 

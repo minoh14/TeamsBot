@@ -73,8 +73,8 @@ class TeamsApp extends TeamsActivityHandler {
             // Get user info
             this.userInfo = await this.getUserInfo(context);
             //console.log(`id: ${this.userInfo.id}`);
-            console.log(`name: ${this.userInfo.name}`);
-            console.log(`email: ${this.userInfo.email}`);
+            //console.log(`name: ${this.userInfo.name}`);
+            //console.log(`email: ${this.userInfo.email}`);
             //console.log(`department: ${this.userInfo.department}`);
             //console.log(`job title: ${this.userInfo.jobTitle}`);
             //console.log(`office location: ${this.userInfo.officeLocation}`);
