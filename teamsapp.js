@@ -50,7 +50,7 @@ const adapter = new CloudAdapter(botFrameworkAuthentication);
 // Error handler
 adapter.onTurnError = async (context, error) => {
     console.error(`\n[onTurnError] ${error}`);
-    await context.sendActivity(`거래선 관리 Agent에서 오류가 발생했습니다.
+    await context.sendActivity(`거래선 관리 Agent에서 오류가 발생했습니다.<br>
 다음에 시도해주시기 바랍니다.`);
 };
 
@@ -80,7 +80,7 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`office location: ${this.userInfo.officeLocation}`);
 
             const text = context.activity.text;
-            //console.log(`원본 메시지: '${text}'`);
+            console.log(`원본 메시지: '${text}'`);
 
             const removedMentionText = TurnContext.removeRecipientMention(context.activity);
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
@@ -89,8 +89,8 @@ class TeamsApp extends TeamsActivityHandler {
             if (processTriggerKeywords.some(keyword => cleanText.includes(keyword))) {
                 // 메시지 안에 프로세스 트리거 키워드가 존재하면 프로세스를 실행한다.
 
-                await this.sendMessageToCurrentUser(`이전에 요청하신 거래선 등록 작업이 진행중인지 확인중입니다.
-진행중인 작업이 없다면 신규 등록을 지원해 드리겠습니다.
+                await this.sendMessageToCurrentUser(`이전에 요청하신 거래선 등록 작업이 진행중인지 확인중입니다.<br>
+진행중인 작업이 없다면 신규 등록을 지원해 드리겠습니다.<br>
 잠시만 기다려주세요.`);
 
                 UIPATH.runProcess(
@@ -121,7 +121,7 @@ class TeamsApp extends TeamsActivityHandler {
             const membersAdded = context.activity.membersAdded;
             for (let member of membersAdded) {
                 if (member.id !== context.activity.recipient.id) {
-                    await context.sendActivity(`안녕하세요. 저는 거래선 관리 Agent입니다.
+                    await context.sendActivity(`안녕하세요. 저는 거래선 관리 Agent입니다.<br>
 무엇을 도와드릴까요?`);
                 }
             }
@@ -145,9 +145,8 @@ class TeamsApp extends TeamsActivityHandler {
 
         try {
             const tokenResponse = await credential.getToken('https://graph.microsoft.com/.default');
-
             //console.log('Graph token:', tokenResponse.token);
-            console.log('Token expires on:', tokenResponse.expiresOnTimestamp);
+            //console.log('Token expires on:', tokenResponse.expiresOnTimestamp);
 
             return tokenResponse.token;
         } catch (error) {
