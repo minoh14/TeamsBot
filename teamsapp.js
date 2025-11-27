@@ -27,7 +27,7 @@ const appPassword = process.env.MicrosoftAppPassword || '';
 const appType = process.env.MicrosoftAppType || 'SingleTenant';
 const appTenantId = process.env.MicrosoftAppTenantId || '';
 const appPort = process.env.MicrosoftAppPort || 3978;
-const polling_sec = process.env.PollingIntervalSeconds || 3;
+const pollingSec = process.env.PollingIntervalSeconds || 3;
 const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
 const textFormat = process.env.TextFormat || 'markdown';
 const taskOwnerId = process.env.TaskOwnerId || '';
@@ -50,8 +50,7 @@ const adapter = new CloudAdapter(botFrameworkAuthentication);
 // Error handler
 adapter.onTurnError = async (context, error) => {
     console.error(`\n[onTurnError] ${error}`);
-    await context.sendActivity(`거래선 관리 Agent에서 오류가 발생했습니다.<br>
-다음에 시도해주시기 바랍니다.`);
+    await context.sendActivity('거래선 관리 Agent에서 오류가 발생했습니다.<br>다음에 시도해주시기 바랍니다.');
 };
 
 // Teams App Class
@@ -89,14 +88,12 @@ class TeamsApp extends TeamsActivityHandler {
             if (processTriggerKeywords.some(keyword => cleanText.includes(keyword))) {
                 // 메시지 안에 프로세스 트리거 키워드가 존재하면 프로세스를 실행한다.
 
-                await this.sendMessageToCurrentUser(`이전에 요청하신 거래선 등록 작업이 진행중인지 확인중입니다.<br>
-진행중인 작업이 없다면 신규 등록을 지원해 드리겠습니다.<br>
-잠시만 기다려주세요.`);
+                await this.sendMessageToCurrentUser('이전에 요청하신 거래선 등록 작업이 진행중인지 확인중입니다.<br>진행중인 작업이 없다면 신규 등록을 지원해 드리겠습니다.<br>잠시만 기다려주세요.');
 
                 UIPATH.runProcess(
                     this.token,
                     {
-                        "g_polling_sec": polling_sec,
+                        "g_polling_sec": pollingSec,
                         "g_task_owner_id": taskOwnerId, // 자금팀 업무 담당자
                         "g_user_info": {
                             id: this.userInfo.id,
@@ -121,8 +118,7 @@ class TeamsApp extends TeamsActivityHandler {
             const membersAdded = context.activity.membersAdded;
             for (let member of membersAdded) {
                 if (member.id !== context.activity.recipient.id) {
-                    await context.sendActivity(`안녕하세요. 저는 거래선 관리 Agent입니다.<br>
-무엇을 도와드릴까요?`);
+                    await context.sendActivity('안녕하세요. 저는 거래선 관리 Agent입니다.<br>무엇을 도와드릴까요?');
                 }
             }
             await next();
