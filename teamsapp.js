@@ -58,7 +58,7 @@ class TeamsApp extends TeamsActivityHandler {
     constructor() {
         super();
 
-        this.token = null; // UiPath 인증 토큰
+        this.uipathToken = null; // UiPath 인증 토큰 (JSON 객체)
         this.conversationReference = null; // 대화 참조 정보
         this.userInfo = null; // 대화중인 사용자 정보
 
@@ -91,7 +91,7 @@ class TeamsApp extends TeamsActivityHandler {
                 await this.sendMessageToCurrentUser('이전에 요청하신 거래선 등록 작업이 진행중인지 확인중입니다.<br>진행중인 작업이 없다면 신규 등록을 지원해 드리겠습니다.<br>잠시만 기다려주세요.');
 
                 UIPATH.runProcess(
-                    this.token,
+                    this.uipathToken.token,
                     {
                         "g_polling_sec": pollingSec,
                         "g_task_owner_id": taskOwnerId, // 자금팀 업무 담당자
@@ -280,13 +280,30 @@ const app = new TeamsApp();
 const teamsAppServer = restify.createServer();
 teamsAppServer.use(restify.plugins.bodyParser());
 
+function triggerUipathTokenRenewal() {
+    setInterval(
+        async () => {
+            console.log('\nUiPath 인증 토큰 갱신 시도 중...');
+            const newToken = await UIPATH.getAccessToken();
+            if (newToken) {
+                app.uipathToken = newToken;
+                console.log('✅ UiPath 인증 토큰 갱신 성공.\n');
+            } else {
+                console.error('❌ UiPath 인증 토큰 갱신 실패.\n');
+            }
+        },
+        (app.uipathToken.expiry - 60) * 1000 // 만료 1분 전에 갱신 시도
+    );
+}
+
 // Start Teams App REST server
 teamsAppServer.listen(appPort, () => {
     (async () => {
-        app.token = await UIPATH.getAccessToken();
+        app.uipathToken = await UIPATH.getAccessToken();
 
-        if (app.token) {
+        if (app.uipathToken) {
             console.log('\nUiPath와의 통신 준비 완료.\n');
+            triggerUipathTokenRenewal();
         } else {
             throw new Error('\nUiPath 인증 실패로 인해 에이전트를 시작할 수 없습니다.');
         }

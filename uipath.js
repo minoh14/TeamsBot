@@ -48,7 +48,10 @@ async function getAccessToken() {
         console.log(`   - Expires In: ${expiresIn} 초`);
         console.log(`   - Access Token: ${accessToken.substring(0, 20)}...`); // 보안을 위하여 토큰 일부만 출력
 
-        return accessToken;
+        return {
+            token: accessToken,
+            expiry: expiresIn
+        };
 
     } catch (error) {
 
