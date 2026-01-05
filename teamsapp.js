@@ -60,7 +60,6 @@ class TeamsApp extends TeamsActivityHandler {
 
         this.uipathToken = null; // UiPath 인증 토큰 (JSON 객체)
         this.conversationReference = null; // 대화 참조 정보
-        this.userInfo = null; // 대화중인 사용자 정보
 
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
@@ -70,13 +69,13 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`AAD Object ID: '${context.activity.from.aadObjectId}'`);
 
             // Get user info
-            this.userInfo = await this.getUserInfo(context);
-            //console.log(`id: ${this.userInfo.id}`);
-            //console.log(`name: ${this.userInfo.name}`);
-            //console.log(`email: ${this.userInfo.email}`);
-            //console.log(`department: ${this.userInfo.department}`);
-            //console.log(`job title: ${this.userInfo.jobTitle}`);
-            //console.log(`office location: ${this.userInfo.officeLocation}`);
+            const userInfo = await this.getUserInfo(context);
+            //console.log(`id: ${userInfo.id}`);
+            //console.log(`name: ${userInfo.name}`);
+            //console.log(`email: ${userInfo.email}`);
+            //console.log(`department: ${userInfo.department}`);
+            //console.log(`job title: ${userInfo.jobTitle}`);
+            //console.log(`office location: ${userInfo.officeLocation}`);
 
             const text = context.activity.text;
             console.log(`원본 메시지: '${text}'`);
@@ -96,18 +95,18 @@ class TeamsApp extends TeamsActivityHandler {
                         "g_polling_sec": pollingSec,
                         "g_task_owner_id": taskOwnerId, // 자금팀 업무 담당자
                         "g_user_info": {
-                            id: this.userInfo.id,
-                            name: this.userInfo.name,
-                            email: this.userInfo.email,
-                            //department: this.userInfo.department,
-                            //jobTitle: this.userInfo.jobTitle,
-                            //officeLocation: this.userInfo.officeLocation
+                            id: userInfo.id,
+                            name: userInfo.name,
+                            email: userInfo.email,
+                            //department: userInfo.department,
+                            //jobTitle: userInfo.jobTitle,
+                            //officeLocation: userInfo.officeLocation
                         }
                     }
                 );
             } else {
                 // 메시지 큐에 메시지 추가
-                MSGQUEUE.msgQueue.enqueue(this.userInfo.id, cleanText);
+                MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
             }
 
             await next();
@@ -182,27 +181,6 @@ class TeamsApp extends TeamsActivityHandler {
             name: context.activity.from.name
         };
         */
-    }
-
-    // Send message to the current user in conversation
-    async sendMessageToCurrentUser(text) {
-        if (!this.conversationReference) {
-            console.error('사용자와의 대화 참조 정보가 없습니다.');
-            return;
-        }
-
-        //console.log(`text: '${text}'`);
-
-        const message = MessageFactory.text(text);
-        message.textFormat = textFormat;
-
-        await adapter.continueConversationAsync(
-            appId,
-            this.conversationReference,
-            async (context) => {
-                await context.sendActivity(message);
-            }
-        );
     }
 
     // Create conversation and send message to a specific user
