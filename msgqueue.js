@@ -14,35 +14,44 @@ const msgPort = process.env.MessageQueuePort || 8080;
 // 메시지 큐 클래스
 class MessageQueue {
     constructor() {
-        this.queueName = 'MsgQueue';
         this.queue = new Map();
-        
-        this.queue.set(this.queueName, []);
     }
 
-    isEmpty() {
-        return this.queue.get(this.queueName).length === 0;
-    }
-
-    reset() {
-        this.queue.set(this.queueName, []);
-    }
-
-    enqueue(message) {
-        this.queue.get(this.queueName).push(message);
-    }
-
-    dequeue() {
-        if (this.isEmpty()) {
-            return null;
+    isEmpty(id) {
+        if (!this.queue.has(id)) {
+            return true;
         } else {
-            return this.queue.get(this.queueName).shift();
+            return this.queue.get(id).length === 0;
         }
     }
 
-    print() {
-        console.log(`\n--- ${this.queueName} 내용 ---`);
-        this.queue.get(this.queueName).forEach((msg, index) => {
+    reset(id) {
+        if (!this.queue.has(id)) {
+            return;
+        } else {
+            this.queue.set(id, []);
+        }
+    }
+
+    enqueue(id, message) {
+        if (!this.queue.has(id)) {
+            this.queue.set(id, []);
+        }
+
+        this.queue.get(id).push(message);
+    }
+
+    dequeue(id) {
+        if (this.isEmpty(id)) {
+            return null;
+        } else {
+            return this.queue.get(id).shift();
+        }
+    }
+
+    print(id) {
+        console.log(`\n--- ${id} 내용 ---`);
+        this.queue.get(id).forEach((msg, index) => {
             console.log(`${index + 1}: '${msg}'`);
         });
     }
@@ -68,13 +77,15 @@ msgQueueServer.listen(msgPort, () => {
 });
 
 msgQueueServer.post('/reset', async (req, res) => {
-    msgQueue.reset();
-    console.log('Message Queue가 초기화되었습니다.');
-    res.send('Message Queue가 초기화되었습니다.');
+    const id = req.body.id;
+    msgQueue.reset(id);
+    console.log(`Message Queue ${id}가 초기화되었습니다.`);
+    res.send(`Message Queue ${id}가 초기화되었습니다.`);
 });
 
 msgQueueServer.post('/dequeue', async (req, res) => {
-    const message = msgQueue.dequeue();
+    const id = req.body.id;
+    const message = msgQueue.dequeue(id);
     if (message) {
         console.log(`Dequeued message: ${message}`);
         res.send({ message: message });

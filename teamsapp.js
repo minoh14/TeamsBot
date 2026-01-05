@@ -107,7 +107,7 @@ class TeamsApp extends TeamsActivityHandler {
                 );
             } else {
                 // 메시지 큐에 메시지 추가
-                MSGQUEUE.msgQueue.enqueue(cleanText);
+                MSGQUEUE.msgQueue.enqueue(this.userInfo.id, cleanText);
             }
 
             await next();
