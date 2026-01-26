@@ -8,13 +8,13 @@ This solution overcomes the limitations of the UiPath Integration Service Teams 
 
 ## How to use
 1. Provision a new server machine to host this Teams App
-2. Assign public domain to the server (e.g. teamsapp.company.com)
+2. Assign public domain to the server (e.g. `teamsapp.company.com`)
 3. Provision an Azure Bot in Microsoft Azure Portal
 4. Prepare icons for this Teams App
 5. Clone this repository
-6. Create .env file, refering to .env.example
+6. Create `.env` file, refering to `.env.example`
 7. Deploy nodejs server on the new machine and then run it to start listening on ports
-8. Adjust manifest.json using information from the Azure Bot
-9. Create Teams App package: Icons and manifest.json
+8. Adjust `manifest.json` using information from the Azure Bot
+9. Create Teams App package: Icon files and `manifest.json`
 10. Deploy Teams App using the package
 11. Perform tests using this Teams App
