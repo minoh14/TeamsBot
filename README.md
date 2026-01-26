@@ -1,7 +1,7 @@
 ## What it does
 This is a Teams App that relays chat messages by storing them in a message queue and providing APIs for periodic polling.
 
-<img width="2066" height="1202" alt="image" src="https://github.com/user-attachments/assets/6a8b265a-d9e2-4fbc-8576-8de1cbcc675f" />
+<img width="2560" height="1417" alt="image" src="https://github.com/user-attachments/assets/a0ede674-396a-4605-9d77-a7341643fb7e" />
 
 ## What does it solve
 This solution overcomes the limitations of the UiPath Integration Service Teams Connector to facilitate true real-time interaction between the user and the automated process.
