@@ -1,5 +1,5 @@
 ## What it does
-This is a Teams App that relays chat messages by storing them in a message queue and providing APIs for periodic polling.
+This is a Teams App that relays chat messages by storing them in a message queue and providing APIs for periodic polling. A shorter polling interval allows for real-time responsiveness.
 
 <img width="2560" height="1417" alt="image" src="https://github.com/user-attachments/assets/a0ede674-396a-4605-9d77-a7341643fb7e" />
 
