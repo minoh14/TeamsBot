@@ -183,13 +183,30 @@ class TeamsApp extends TeamsActivityHandler {
         */
     }
 
-    // Create conversation and send message to a specific user
-    async createConversationAndSendMessage(context, userId, text) {
-        try {
-            //console.log(`conversationReference.bot.id: '${this.conversationReference.bot.id}'`);
-            //console.log(`conversationReference.bot.name: '${this.conversationReference.bot.name}'`);
-            //console.log(`conversationReference.serviceUrl: '${this.conversationReference.serviceUrl}'`);
+    // Send message to the current user in conversation
+    async sendMessageToCurrentUser(text) {
+        if (!this.conversationReference) {
+            console.error('대화 참조 정보가 없습니다. 메시지를 보낼 수 없습니다.');
+            return;
+        }
 
+        //console.log(`text: '${text}'`);
+
+        const message = MessageFactory.text(text);
+        message.textFormat = textFormat;
+
+        await adapter.continueConversationAsync(
+            appId,
+            this.conversationReference,
+            async (context) => {
+                await context.sendActivity(message);
+            }
+        );
+    }
+
+    // Create conversation and send message to a specific user
+    async createConversationAndSendMessage(userId, text) {
+        try {
             const appCredentials = new MicrosoftAppCredentials(
                 appId,
                 appPassword,
@@ -238,7 +255,6 @@ class TeamsApp extends TeamsActivityHandler {
                 async (context) => {
                     const message = MessageFactory.text(text);
                     message.textFormat = textFormat;
-
                     await context.sendActivity(message);
                 }
             );
@@ -315,8 +331,13 @@ teamsAppServer.post('/api/sendMessage', async (req, res) => {
         return;
     }
 
-    await app.createConversationAndSendMessage(userId, message);
-    res.send(`사용자 ${userId}에게 메시지를 보냈습니다.`);
+    try {
+        await app.createConversationAndSendMessage(userId, message);
+        res.send(`사용자 ${userId}에게 메시지를 보냈습니다.`);
+    } catch (err) {
+        console.error('★ 엔드포인트 에러:', err);
+        res.status(500).send('오류 발생');
+    }
 });
 
 // Teams App 메시지 전송 엔드포인트 (현재 대화중인 사용자)
