@@ -20,8 +20,10 @@ const {
 const { Client } = require('@microsoft/microsoft-graph-client');
 const { ClientSecretCredential } = require('@azure/identity');
 const { ConnectorClient, MicrosoftAppCredentials } = require('botframework-connector');
+const crypto = require('crypto');
 
 // 환경 변수 (.env 파일에서 관리)
+const teamsAppApiKey = process.env.teamsAppApiKey || '';
 const appId = process.env.MicrosoftAppId || '';
 const appPassword = process.env.MicrosoftAppPassword || '';
 const appType = process.env.MicrosoftAppType || 'SingleTenant';
@@ -34,6 +36,35 @@ const taskOwnerId = process.env.TaskOwnerId || '';
 const appMessage1 = process.env.AppMessage1 || '';
 const appMessage2 = process.env.AppMessage2 || '';
 const appMessage3 = process.env.AppMessage3 || '';
+
+// API Key Authentication
+const apiKeyAuth = (req, res, next) => {
+    const clientKey = req.headers['x-api-key'];
+
+    if (!clientKey) {
+        console.error('TA API Key missing in HTTP request header!');
+        return res.send(401, { error: 'API 키가 누락되었습니다.' });
+    }
+
+    // 보안 강화: 타임 상수 비교
+    try {
+        const isMatch = crypto.timingSafeEqual(
+            Buffer.from(clientKey),
+            Buffer.from(teamsAppApiKey)
+        );
+
+        if (isMatch) {
+            //console.log('TA API key identical');
+            next();
+        } else {
+            console.error('TA API Key NOT identical!');
+            res.send(403, { error: '권한이 없습니다.' });
+        }
+    } catch (e) {
+        console.error('TA API Key NOT same length!');
+        res.send(403, { error: '권한이 없습니다.' });
+    }
+};
 
 // Create adapter
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
@@ -322,12 +353,11 @@ teamsAppServer.post('/api/messages', async (req, res) => {
 });
 
 // Teams App 메시지 전송 엔드포인트 (특정 사용자)
-teamsAppServer.post('/api/sendMessage', async (req, res) => {
+teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
     const { userId, message } = req.body;
 
     if (!userId || !message) {
-        res.status(400);
-        res.send('userId와 message 필드가 필요합니다.');
+        res.send(400, 'userId와 message 필드가 필요합니다.');
         return;
     }
 
@@ -336,21 +366,21 @@ teamsAppServer.post('/api/sendMessage', async (req, res) => {
         res.send(`사용자 ${userId}에게 메시지를 보냈습니다.`);
     } catch (err) {
         console.error('★ 엔드포인트 에러:', err);
-        res.status(500).send('오류 발생');
+        res.send(500, '오류 발생');
     }
 });
-
+/*
 // Teams App 메시지 전송 엔드포인트 (현재 대화중인 사용자)
-teamsAppServer.post('/api/sendMessageToCurrentUser', async (req, res) => {
+teamsAppServer.post('/api/sendMessageToCurrentUser', apiKeyAuth, async (req, res) => {
     const { message } = req.body;
 
     if (!message) {
         console.log('message 필드가 없습니다.');
-        res.status(400);
-        res.send('message 필드가 필요합니다.');
+        res.send(400, 'message 필드가 필요합니다.');
         return;
     }
 
     await app.sendMessageToCurrentUser(message);
     res.send('현재 대화중인 사용자에게 메시지를 보냈습니다.');
 });
+*/

@@ -4,12 +4,43 @@
 
 // 필요한 패키지: npm install dotenv restify
 const restify = require('restify');
+const crypto = require('crypto');
 
 // load environment variables from .env file
 require('dotenv').config();
 
 // 환경 변수 (.env 파일에서 관리)
 const msgPort = process.env.MessageQueuePort || 8080;
+const messageQueueApiKey = process.env.messageQueueApiKey || '';
+
+// API Key Authentication
+const apiKeyAuth = (req, res, next) => {
+    const clientKey = req.headers['x-api-key'];
+
+    if (!clientKey) {
+        console.error('MQ API Key missing in HTTP request header!');
+        return res.send(401, { error: 'API 키가 누락되었습니다.' })
+    }
+
+    // 보안 강화: 타임 상수 비교
+    try {
+        const isMatch = crypto.timingSafeEqual(
+            Buffer.from(clientKey),
+            Buffer.from(messageQueueApiKey)
+        );
+
+        if (isMatch) {
+            //console.log('MQ API key identical');
+            next();
+        } else {
+            console.error('MQ API Key NOT identical!');
+            res.send(403, { error: '권한이 없습니다.' })
+        }
+    } catch (e) {
+        console.error('MQ API Key NOT same length!');
+        res.send(403, { error: '권한이 없습니다.' })
+    }
+};
 
 // 메시지 큐 클래스
 class MessageQueue {
@@ -76,14 +107,16 @@ msgQueueServer.listen(msgPort, () => {
     console.log('Message Queue 서버 시작됨.\n');
 });
 
-msgQueueServer.post('/reset', async (req, res) => {
+// Reset message queue for specified user
+msgQueueServer.post('/reset', apiKeyAuth, async (req, res) => {
     const id = req.body.id;
     msgQueue.reset(id);
     console.log(`Message Queue ${id}가 초기화되었습니다.`);
     res.send(`Message Queue ${id}가 초기화되었습니다.`);
 });
 
-msgQueueServer.post('/dequeue', async (req, res) => {
+// Retrieve a message
+msgQueueServer.post('/dequeue', apiKeyAuth, async (req, res) => {
     const id = req.body.id;
     const message = msgQueue.dequeue(id);
     if (message) {
