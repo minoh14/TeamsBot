@@ -80,10 +80,12 @@ class MessageQueue {
         }
     }
 
-    print(id) {
-        console.log(`\n--- ${id} 내용 ---`);
-        this.queue.get(id).forEach((msg, index) => {
-            console.log(`${index + 1}: '${msg}'`);
+    print() {
+        this.queue.forEach((messages, id) => {
+            console.log(`\n--- ${id} 내용 ---`);
+            messages.forEach((msg, index) => {
+                console.log(`${index + 1}: '${msg}'`);
+            });
         });
     }
 }
