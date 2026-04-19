@@ -21,6 +21,7 @@ const { Client } = require('@microsoft/microsoft-graph-client');
 const { ClientSecretCredential } = require('@azure/identity');
 const { ConnectorClient, MicrosoftAppCredentials } = require('botframework-connector');
 const crypto = require('crypto');
+const fs = require('fs');
 
 // 환경 변수 (.env 파일에서 관리)
 const teamsAppApiKey = process.env.teamsAppApiKey || '';
@@ -302,7 +303,12 @@ class TeamsApp extends TeamsActivityHandler {
 const app = new TeamsApp();
 
 // Teams App REST 서버 생성
-const teamsAppServer = restify.createServer();
+const serverOptions = {
+    certificate: fs.readFileSync('cert.pem'),
+    key: fs.readFileSync('key.pem')
+};
+//const teamsAppServer = restify.createServer();  // HTTP 서버
+const teamsAppServer = restify.createServer(serverOptions);  // HTTPS 서버
 teamsAppServer.use(restify.plugins.bodyParser());
 
 function triggerUipathTokenRenewal() {

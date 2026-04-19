@@ -5,6 +5,7 @@
 // 필요한 패키지: npm install dotenv restify
 const restify = require('restify');
 const crypto = require('crypto');
+const fs = require('fs');
 
 // load environment variables from .env file
 require('dotenv').config();
@@ -98,7 +99,12 @@ class MessageQueue {
 const msgQueue = new MessageQueue();
 
 // Message Queue REST 서버 생성
-const msgQueueServer = restify.createServer();
+const serverOptions = {
+    certificate: fs.readFileSync('cert.pem'),
+    key: fs.readFileSync('key.pem')
+};
+//const msgQueueServer = restify.createServer();  // HTTP 서버
+const msgQueueServer = restify.createServer(serverOptions);  // HTTPS 서버
 msgQueueServer.use(restify.plugins.bodyParser());
 
 // Message Queue 헬스체크 엔드포인트
