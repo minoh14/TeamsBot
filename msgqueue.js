@@ -81,6 +81,10 @@ class MessageQueue {
     }
 
     print() {
+        if (this.queue.size === 0) {
+            console.log('\n--- 메시지 큐가 비어있습니다 ---');
+            return;
+        }
         this.queue.forEach((messages, id) => {
             console.log(`\n--- ${id} 내용 ---`);
             messages.forEach((msg, index) => {
