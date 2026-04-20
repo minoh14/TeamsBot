@@ -108,7 +108,7 @@ const msgQueueServer = restify.createServer(serverOptions);  // HTTPS 서버
 msgQueueServer.use(restify.plugins.bodyParser());
 
 // Message Queue 헬스체크 엔드포인트
-msgQueueServer.get('/', async (req, res) => {
+msgQueueServer.get('/', apiKeyAuth, async (req, res) => {
     msgQueue.print();
     res.send('Message Queue 서버가 실행 중입니다.');
 });
