@@ -24,7 +24,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 // 환경 변수 (.env 파일에서 관리)
-const teamsAppApiKey = process.env.teamsAppApiKey || '';
+const teamsAppApiKey = process.env.TeamsAppApiKey || '';
 const appId = process.env.MicrosoftAppId || '';
 const appPassword = process.env.MicrosoftAppPassword || '';
 const appType = process.env.MicrosoftAppType || 'SingleTenant';

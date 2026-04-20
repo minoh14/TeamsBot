@@ -12,7 +12,7 @@ require('dotenv').config();
 
 // 환경 변수 (.env 파일에서 관리)
 const msgPort = process.env.MessageQueuePort || 8080;
-const messageQueueApiKey = process.env.messageQueueApiKey || '';
+const messageQueueApiKey = process.env.MessageQueueApiKey || '';
 
 // API Key Authentication
 const apiKeyAuth = (req, res, next) => {
