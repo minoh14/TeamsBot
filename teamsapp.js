@@ -110,7 +110,7 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`office location: ${userInfo.officeLocation}`);
 
             const text = context.activity.text;
-            console.log(`원본 메시지: '${text}'`);
+            console.log(`[${new Date().toLocaleString()}] 원본 메시지: '${text}'`);
 
             const removedMentionText = TurnContext.removeRecipientMention(context.activity);
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
@@ -314,13 +314,13 @@ teamsAppServer.use(restify.plugins.bodyParser());
 function triggerUipathTokenRenewal() {
     setInterval(
         async () => {
-            console.log('\nUiPath 인증 토큰 갱신 시도 중...');
+            console.log(`\n[${new Date().toLocaleString()}] UiPath 인증 토큰 갱신 시도 중...`);
             const newToken = await UIPATH.getAccessToken();
             if (newToken) {
                 app.uipathToken = newToken;
-                console.log('✅ UiPath 인증 토큰 갱신 성공.\n');
+                console.log(`[${new Date().toLocaleString()}] ✅ UiPath 인증 토큰 갱신 성공.\n`);
             } else {
-                console.error('❌ UiPath 인증 토큰 갱신 실패.\n');
+                console.error(`[${new Date().toLocaleString()}] ❌ UiPath 인증 토큰 갱신 실패.\n`);
             }
         },
         (app.uipathToken.expiry - 60) * 1000 // 만료 1분 전에 갱신 시도
@@ -344,7 +344,7 @@ teamsAppServer.listen(appPort, () => {
     console.log(`App Password: ${appPassword.substring(0, 8)}...`);
     console.log(`Tenant ID: ${appTenantId}`);
 
-    console.log(`\nTeams App listening to ${teamsAppServer.url}`);
+    console.log(`\n[${new Date().toLocaleString()}] Teams App listening to ${teamsAppServer.url}`);
     console.log('에이전트가 시작됨. Teams에서 메시지를 보내보세요.\n');
 });
 

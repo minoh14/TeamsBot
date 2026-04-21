@@ -33,7 +33,7 @@ async function getAccessToken() {
 
     try {
 
-        console.log('\nUiPath 인증 토큰 요청 중...');
+        console.log(`\n[${new Date().toLocaleString()}] UiPath 인증 토큰 요청 중...`);
 
         // URLSearchParams 객체를 data로 전달하면,
         // axios가 자동으로 'Content-Type': 'application/x-www-form-urlencoded' 헤더를 설정해준다.
@@ -103,7 +103,7 @@ async function runProcess(token, inputArguments) {
             }
         });
 
-        console.log('✅ UiPath 프로세스 실행 성공.');
+        console.log(`[${new Date().toLocaleString()}] ✅ UiPath 프로세스 실행 성공.`);
         console.log(`   - Status: ${response.status}`);
         console.log(`   - Job ID: ${response.data.value[0].Id}`);
         return response.data;
