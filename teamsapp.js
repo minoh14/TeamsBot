@@ -66,7 +66,20 @@ const apiKeyAuth = (req, res, next) => {
         res.send(403, { error: '권한이 없습니다.' });
     }
 };
+/*
+// IP CIDR 허용 범위 (Microsoft Teams 채팅의 IP 범위)
+const allowedCidrs = ['52.112.0.0/14', '52.122.0.0/15'];
 
+function ipToInt(ip) {
+    return ip.split('.').reduce((acc, oct) => (acc * 256 + parseInt(oct)) >>> 0, 0);
+}
+
+function ipInCidr(ip, cidr) {
+    const [range, bits] = cidr.split('/');
+    const mask = (0xFFFFFFFF << (32 - parseInt(bits))) >>> 0;
+    return (ipToInt(ip) & mask) === (ipToInt(range) & mask);
+}
+*/
 // Create adapter
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
     MicrosoftAppId: appId,
@@ -353,8 +366,17 @@ teamsAppServer.get('/', async (req, res) => {
     res.send('에이전트가 실행 중입니다.');
 });
 
-// Listen for incoming requests
+// Listen to incoming requests
 teamsAppServer.post('/api/messages', async (req, res) => {
+    /*
+    const remoteAddress = ((req.headers['x-forwarded-for'] || req.socket.remoteAddress) ?? '').split(',')[0].trim();
+    console.log(`remote address: ${remoteAddress}`);
+    if (!allowedCidrs.some(cidr => ipInCidr(remoteAddress, cidr))) {
+        console.error(`허용되지 않은 IP: ${remoteAddress}`);
+        res.send(403, { error: '허용되지 않은 IP 주소입니다.' });
+        return;
+    }
+    */
     await adapter.process(req, res, (context) => app.run(context));
 });
 
