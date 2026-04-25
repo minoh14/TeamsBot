@@ -382,6 +382,10 @@ teamsAppServer.post('/api/messages', async (req, res) => {
 
 // Teams App 메시지 전송 엔드포인트 (특정 사용자)
 teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
+    /*
+    const remoteAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    console.log(`remote address: ${remoteAddress}`);
+    */
     const { userId, message } = req.body;
 
     if (!userId || !message) {
