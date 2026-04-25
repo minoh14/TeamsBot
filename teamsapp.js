@@ -44,7 +44,7 @@ const apiKeyAuth = (req, res, next) => {
 
     if (!clientKey) {
         console.error('TA API Key missing in HTTP request header!');
-        return res.send(401, { error: 'API 키가 누락되었습니다.' });
+        return res.send(403, { error: '권한이 없습니다.' });
     }
 
     // 보안 강화: 타임 상수 비교
