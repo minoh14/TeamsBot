@@ -146,7 +146,8 @@ class TeamsApp extends TeamsActivityHandler {
                             //department: userInfo.department,
                             //jobTitle: userInfo.jobTitle,
                             //officeLocation: userInfo.officeLocation
-                        }
+                        },
+                        "g_user_response": cleanText
                     }
                 );
             } else {
