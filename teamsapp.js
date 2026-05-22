@@ -33,7 +33,7 @@ const appPort = process.env.MicrosoftAppPort || 3978;
 const pollingSec = process.env.PollingIntervalSeconds || 3;
 const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
 const textFormat = process.env.TextFormat || 'markdown';
-const taskOwnerId = process.env.TaskOwnerId || '';
+const taskOwnerIds = process.env.TaskOwnerIds ? process.env.TaskOwnerIds.split(' ') : [];
 const appMessage1 = process.env.AppMessage1 || '';
 const appMessage2 = process.env.AppMessage2 || '';
 const appMessage3 = process.env.AppMessage3 || '';
@@ -138,7 +138,7 @@ class TeamsApp extends TeamsActivityHandler {
                     this.uipathToken.token,
                     {
                         "g_polling_sec": pollingSec,
-                        "g_task_owner_id": taskOwnerId, // 자금팀 업무 담당자
+                        "g_task_owner_id": taskOwnerIds, // 국내 거래선 담당자 & 해외 거래선 담당자
                         "g_user_info": {
                             id: userInfo.id,
                             name: userInfo.name,
