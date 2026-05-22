@@ -24,6 +24,9 @@ const uipathAuthScope = 'OR.Jobs.Write';
 async function getAccessToken() {
 
     const params = new URLSearchParams();
+    // URLSearchParams 객체를 data로 전달하면,
+    // axios가 자동으로 'Content-Type': 'application/x-www-form-urlencoded' 헤더를 설정해준다.
+    //params.append('Content-Type', 'application/x-www-form-urlencoded');
     params.append('grant_type', 'client_credentials');
     params.append('client_id', uipathAppId);
     params.append('client_secret', uipathAppSecret);
@@ -35,8 +38,6 @@ async function getAccessToken() {
 
         console.log(`\n[${new Date().toLocaleString()}] UiPath 인증 토큰 요청 중...`);
 
-        // URLSearchParams 객체를 data로 전달하면,
-        // axios가 자동으로 'Content-Type': 'application/x-www-form-urlencoded' 헤더를 설정해준다.
         const response = await axios.post(apiUrl, params);
 
         const accessToken = response.data.access_token;
@@ -82,7 +83,7 @@ async function runProcess(token, inputArguments) {
         return null;
     }
 
-    const apiUrl = `https://cloud.uipath.com/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs/UiPath.Server.Configuration.OData.StartJobs`;
+    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs/UiPath.Server.Configuration.OData.StartJobs`;
 
     const jobPayload = {
         startInfo: {
