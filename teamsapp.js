@@ -369,6 +369,8 @@ teamsAppServer.get('/', async (req, res) => {
 // Listen to incoming requests
 teamsAppServer.post('/api/messages', async (req, res) => {
     /*
+    console.log(`X-Forwarded-For: ${req.headers['x-forwarded-for']}`);
+    console.log(`Remote Address : ${req.socket.remoteAddress}`);
     const remoteAddress = ((req.headers['x-forwarded-for'] || req.socket.remoteAddress) ?? '').split(',')[0].trim();
     console.log(`remote address: ${remoteAddress}`);
     if (!allowedCidrs.some(cidr => ipInCidr(remoteAddress, cidr))) {
@@ -383,6 +385,8 @@ teamsAppServer.post('/api/messages', async (req, res) => {
 // Teams App 메시지 전송 엔드포인트 (특정 사용자)
 teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
     /*
+    console.log(`X-Forwarded-For: ${req.headers['x-forwarded-for']}`);
+    console.log(`Remote Address : ${req.socket.remoteAddress}`);
     const remoteAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     console.log(`remote address: ${remoteAddress}`);
     */
