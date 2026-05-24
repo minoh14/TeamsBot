@@ -2,10 +2,13 @@
 // msgqueue.js
 //------------------------------------------------
 
-// 필요한 패키지: npm install dotenv restify
+// 필요한 패키지: npm install axios restify crypto fs dotenv
+const axios = require('axios');
 const restify = require('restify');
 const crypto = require('crypto');
 const fs = require('fs');
+
+const UIPATH = require('./uipath');
 
 // load environment variables from .env file
 require('dotenv').config();
@@ -47,6 +50,7 @@ const apiKeyAuth = (req, res, next) => {
 class MessageQueue {
     constructor() {
         this.queue = new Map();
+        this.callback_urls = new Map();  // 비동기 메시지 알림을 위한 콜백 URL 저장
     }
 
     isEmpty(id) {
@@ -66,11 +70,18 @@ class MessageQueue {
     }
 
     enqueue(id, message) {
-        if (!this.queue.has(id)) {
-            this.queue.set(id, []);
+        if (this.callback_urls.has(id)) {
+            // 콜백 URL이 존재하는 경우, 메시지를 큐에 추가하지 않고 오케스트레이터로 보낸 후 콜백 URL로 알림
+            UIPATH.enqueueMessageToOrchestratorQueue(id, message);
+            axios.post(this.callback_urls.get(id), { "user_id": id });
+            this.callback_urls.delete(id);  // 콜백 URL로 알림을 보낸 후 URL 삭제
+        } else {
+            // 콜백 URL이 존재하지 않는 경우, 메시지를 큐에 추가함
+            if (!this.queue.has(id)) {
+                this.queue.set(id, []);
+            }
+            this.queue.get(id).push(message);
         }
-
-        this.queue.get(id).push(message);
     }
 
     dequeue(id) {
@@ -127,7 +138,7 @@ msgQueueServer.post('/reset', apiKeyAuth, async (req, res) => {
     res.send(`Message Queue ${id}가 초기화되었습니다.`);
 });
 
-// Retrieve a message
+// Retrieve a message (polling)
 msgQueueServer.post('/dequeue', apiKeyAuth, async (req, res) => {
     const id = req.body.id;
     const message = msgQueue.dequeue(id);
@@ -138,6 +149,14 @@ msgQueueServer.post('/dequeue', apiKeyAuth, async (req, res) => {
         //console.log('Message Queue is empty.');
         res.send({ message: null });
     }
+});
+
+// Retrieve a message (async)
+msgQueueServer.post('/dequeue-async', apiKeyAuth, async (req, res) => {
+    const id = req.body.id;
+    const callback_url = req.body.callback_url;  // 메시지가 도착했을 때 알림을 받을 콜백 URL
+
+    msgQueue.callback_urls.set(id, callback_url);  // 콜백 URL 저장
 });
 
 module.exports = {

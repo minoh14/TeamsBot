@@ -17,8 +17,12 @@ const uipathOrganizationName = process.env.UiPathOrganizationName || '';
 const uipathTenantName = process.env.UiPathTenantName || '';
 const uipathFolderId = process.env.UiPathFolderId || '';
 const uipathProcessName = process.env.UiPathProcessName || '';
+const uipathQueueName = process.env.UiPathQueueName || '';
 //const uipathAuthScope = 'OR.Administration OR.Administration.Read OR.Administration.Write OR.Analytics OR.Analytics.Read OR.Analytics.Write OR.Assets OR.Assets.Read OR.Assets.Write OR.Audit OR.Audit.Read OR.Audit.Write OR.AutomationSolutions.Access OR.BackgroundTasks OR.BackgroundTasks.Read OR.BackgroundTasks.Write OR.Execution OR.Execution.Read OR.Execution.Write OR.Folders OR.Folders.Read OR.Folders.Write OR.Hypervisor OR.Hypervisor.Read OR.Hypervisor.Write OR.Jobs OR.Jobs.Read OR.Jobs.Write OR.License OR.License.Read OR.License.Write OR.Machines OR.Machines.Read OR.Machines.Write OR.ML OR.ML.Read OR.ML.Write OR.Monitoring OR.Monitoring.Read OR.Monitoring.Write OR.Queues OR.Queues.Read OR.Queues.Write OR.Robots OR.Robots.Read OR.Robots.Write OR.Settings OR.Settings.Read OR.Settings.Write OR.Tasks OR.Tasks.Read OR.Tasks.Write OR.TestDataQueues OR.TestDataQueues.Read OR.TestDataQueues.Write OR.TestSetExecutions OR.TestSetExecutions.Read OR.TestSetExecutions.Write OR.TestSets OR.TestSets.Read OR.TestSets.Write OR.TestSetSchedules OR.TestSetSchedules.Read OR.TestSetSchedules.Write OR.Users OR.Users.Read OR.Users.Write OR.Webhooks OR.Webhooks.Read OR.Webhooks.Write';
-const uipathAuthScope = 'OR.Jobs.Write';
+const uipathAuthScope = 'OR.Jobs OR.Queues';
+
+// 모듈 내부 토큰 캐시 (getAccessToken 호출 시 자동 갱신됨)
+let cachedTokenObj = null;
 
 // UiPath 인증 토큰 가져오기 함수
 async function getAccessToken() {
@@ -49,10 +53,11 @@ async function getAccessToken() {
         console.log(`   - Expires In: ${expiresIn} 초`);
         console.log(`   - Access Token: ${accessToken.substring(0, 20)}...`); // 보안을 위하여 토큰 일부만 출력
 
-        return {
+        cachedTokenObj = {
             token: accessToken,
             expiry: expiresIn
         };
+        return cachedTokenObj;
 
     } catch (error) {
 
@@ -129,7 +134,53 @@ async function runProcess(token, inputArguments) {
     }
 }
 
+// 오케스트레이터 큐에 메세지 추가
+async function enqueueMessageToOrchestratorQueue(id, message) {
+
+    if (!cachedTokenObj || !cachedTokenObj.token) {
+        console.error('UiPath 인증 토큰이 없습니다. 메시지를 오케스트레이터 큐에 추가할 수 없습니다.');
+        return null;
+    }
+    const token = cachedTokenObj.token;
+
+    //const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Queues/UiPath.Server.Configuration.OData.AddQueueItem`;
+    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Queues/UiPathODataSvc.AddQueueItem`;
+
+    const payload = {
+        itemData: {
+            Priority: 'Normal',
+            Name: uipathQueueName,
+            SpecificContent: { message: message },
+            Reference: id  // Teams user id
+        }
+    };
+
+    try {
+        const response = await axios.post(apiUrl, payload, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-UIPATH-OrganizationUnitId': uipathFolderId
+            }
+        });
+        console.log(`[${new Date().toLocaleString()}] ✅ 메시지가 오케스트레이터 큐에 추가되었습니다.`);
+        return response.data;
+    } catch (error) {
+        console.error('❌ 오케스트레이터 큐에 메시지 추가 실패:');
+        if (error.response) {
+            console.error(`   - Status: ${error.response.status}`);
+            console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+            console.error('   - Error: No response received from UiPath API.');
+        } else {
+            console.error(`   - Error: ${error.message}`);
+        }
+        return null;
+    }
+}
+
 module.exports = {
     getAccessToken,
-    runProcess
+    runProcess,
+    enqueueMessageToOrchestratorQueue
 };
