@@ -138,7 +138,7 @@ class TeamsApp extends TeamsActivityHandler {
                     this.uipathToken.token,
                     {
                         "g_polling_sec": pollingSec,
-                        "g_task_owner_id": taskOwnerIds, // 국내 거래선 담당자 & 해외 거래선 담당자
+                        "g_task_owner_ids": taskOwnerIds, // 국내 거래선 담당자 & 해외 거래선 담당자
                         "g_user_info": {
                             id: userInfo.id,
                             name: userInfo.name,
