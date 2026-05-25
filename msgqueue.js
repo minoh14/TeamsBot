@@ -77,12 +77,18 @@ class MessageQueue {
 
         if (uipathWebhookUrl) {
             // UiPath Webhook URL로 알림
-            axios.post(uipathWebhookUrl, {}, {
-                headers: {
-                    'Content-Type': 'text/plain',
-                    uipathWebhookFormat: uipathWebhookKey
+            axios.post(uipathWebhookUrl,
+                {
+                    user_id: id,
+                    message: message
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        uipathWebhookFormat: uipathWebhookKey
+                    }
                 }
-            });
+            );
         }
     }
 
