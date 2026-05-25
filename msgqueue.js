@@ -70,10 +70,10 @@ class MessageQueue {
     }
 
     enqueue(id, message) {
+
         if (!this.queue.has(id)) {
             this.queue.set(id, []);
         }
-        this.queue.get(id).push(message);
 
         if (uipathWebhookUrl) {
             // UiPath Webhook URL로 알림
@@ -88,7 +88,25 @@ class MessageQueue {
                         uipathWebhookFormat: uipathWebhookKey
                     }
                 }
-            );
+            )
+            .then(response => {
+                console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 알림 성공.`);
+                console.log(`   - Status: ${response.status}`);
+            })
+            .catch(error => {
+                // Webhook 알림 실패 시에는 메시지를 큐에 추가
+                this.queue.get(id).push(message);
+
+                if (error.response) {
+                    // 서버가 에러 응답을 반환한 경우 (e.g., 400, 401, 403)
+                    console.error('❌ UiPath Webhook 알림 실패:');
+                    console.error(`   - Status: ${error.response.status}`);
+                    console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
+                } else {
+                    console.error('❌ UiPath Webhook 알림 실패:');
+                    console.error(`   - Message: ${error.message}`);
+                }
+            });
         }
     }
 
