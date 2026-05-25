@@ -134,53 +134,7 @@ async function runProcess(token, inputArguments) {
     }
 }
 
-// 오케스트레이터 큐에 메세지 추가
-async function enqueueMessageToOrchestratorQueue(id, message) {
-
-    if (!cachedTokenObj || !cachedTokenObj.token) {
-        console.error('UiPath 인증 토큰이 없습니다. 메시지를 오케스트레이터 큐에 추가할 수 없습니다.');
-        return null;
-    }
-    const token = cachedTokenObj.token;
-
-    //const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Queues/UiPath.Server.Configuration.OData.AddQueueItem`;
-    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Queues/UiPathODataSvc.AddQueueItem`;
-
-    const payload = {
-        itemData: {
-            Priority: 'Normal',
-            Name: uipathQueueName,
-            SpecificContent: { message: message },
-            Reference: id  // Teams user id
-        }
-    };
-
-    try {
-        const response = await axios.post(apiUrl, payload, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'X-UIPATH-OrganizationUnitId': uipathFolderId
-            }
-        });
-        console.log(`[${new Date().toLocaleString()}] ✅ 메시지가 오케스트레이터 큐에 추가되었습니다.`);
-        return response.data;
-    } catch (error) {
-        console.error('❌ 오케스트레이터 큐에 메시지 추가 실패:');
-        if (error.response) {
-            console.error(`   - Status: ${error.response.status}`);
-            console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
-        } else if (error.request) {
-            console.error('   - Error: No response received from UiPath API.');
-        } else {
-            console.error(`   - Error: ${error.message}`);
-        }
-        return null;
-    }
-}
-
 module.exports = {
     getAccessToken,
-    runProcess,
-    enqueueMessageToOrchestratorQueue
+    runProcess
 };

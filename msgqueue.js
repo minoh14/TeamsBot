@@ -8,14 +8,15 @@ const restify = require('restify');
 const crypto = require('crypto');
 const fs = require('fs');
 
-const UIPATH = require('./uipath');
-
 // load environment variables from .env file
 require('dotenv').config();
 
 // 환경 변수 (.env 파일에서 관리)
 const msgPort = process.env.MessageQueuePort || 8080;
 const messageQueueApiKey = process.env.MessageQueueApiKey || '';
+const uipathWebhookUrl = process.env.UiPathWebhookUrl || '';
+const uipathWebhookKey = process.env.UiPathWebhookKey || '';
+const uipathWebhookFormat = process.env.UiPathWebhookFormat || 'x-uipath-webhookkey';
 
 // API Key Authentication
 const apiKeyAuth = (req, res, next) => {
@@ -50,7 +51,6 @@ const apiKeyAuth = (req, res, next) => {
 class MessageQueue {
     constructor() {
         this.queue = new Map();
-        this.callback_urls = new Map();  // 비동기 메시지 알림을 위한 콜백 URL 저장
     }
 
     isEmpty(id) {
@@ -70,17 +70,19 @@ class MessageQueue {
     }
 
     enqueue(id, message) {
-        if (this.callback_urls.has(id)) {
-            // 콜백 URL이 존재하는 경우, 메시지를 큐에 추가하지 않고 오케스트레이터로 보낸 후 콜백 URL로 알림
-            UIPATH.enqueueMessageToOrchestratorQueue(id, message);
-            axios.post(this.callback_urls.get(id), { "user_id": id });
-            this.callback_urls.delete(id);  // 콜백 URL로 알림을 보낸 후 URL 삭제
-        } else {
-            // 콜백 URL이 존재하지 않는 경우, 메시지를 큐에 추가함
-            if (!this.queue.has(id)) {
-                this.queue.set(id, []);
-            }
-            this.queue.get(id).push(message);
+        if (!this.queue.has(id)) {
+            this.queue.set(id, []);
+        }
+        this.queue.get(id).push(message);
+
+        if (uipathWebhookUrl) {
+            // UiPath Webhook URL로 알림
+            axios.post(uipathWebhookUrl, {}, {
+                headers: {
+                    'Content-Type': 'text/plain',
+                    uipathWebhookFormat: uipathWebhookKey
+                }
+            });
         }
     }
 
@@ -149,14 +151,6 @@ msgQueueServer.post('/dequeue', apiKeyAuth, async (req, res) => {
         //console.log('Message Queue is empty.');
         res.send({ message: null });
     }
-});
-
-// Retrieve a message (async)
-msgQueueServer.post('/dequeue-async', apiKeyAuth, async (req, res) => {
-    const id = req.body.id;
-    const callback_url = req.body.callback_url;  // 메시지가 도착했을 때 알림을 받을 콜백 URL
-
-    msgQueue.callback_urls.set(id, callback_url);  // 콜백 URL 저장
 });
 
 module.exports = {
