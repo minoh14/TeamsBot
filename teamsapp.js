@@ -32,6 +32,7 @@ const appType = process.env.MicrosoftAppType || 'SingleTenant';
 const appTenantId = process.env.MicrosoftAppTenantId || '';
 const appPort = process.env.MicrosoftAppPort || 3978;
 const pollingSec = process.env.PollingIntervalSeconds || 3;
+const processTriggerInterval = process.env.ProcessTriggerInterval || 10;
 const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
 const textFormat = process.env.TextFormat || 'markdown';
 const taskOwnerIds = process.env.TaskOwnerIds ? process.env.TaskOwnerIds.split(' ') : [];
@@ -367,7 +368,7 @@ async function tryProcessRun() {
 }
 
 function triggerProcessRun() {
-    setInterval(tryProcessRun, 10 * 1000);  // every 10 seconds
+    setInterval(tryProcessRun, processTriggerInterval * 1000);
 }
 
 // Start Teams App REST server
