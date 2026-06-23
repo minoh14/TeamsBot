@@ -345,7 +345,7 @@ async function tryProcessRun() {
     const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token)
     console.log(`  # available runtimes: ${availableRuntimes}`);
 
-    if (availableRuntimes > 0) {
+    if (availableRuntimes >= 2) {  // runtime이 두 개 이상 확보되었을 때에만 실행한다.
         item = PROCQUEUE.processQueue.dequeue();
 
         await app.sendMessageToCurrentUser(appMessage2);

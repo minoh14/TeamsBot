@@ -134,7 +134,7 @@ async function runProcess(token, inputArguments) {
     }
 }
 
-// 가용한 로봇의 개수를 반환한다. (Available 상태의 런타임 개수)
+// 가용한 런타임 수를 반환한다. (총 Unattended 슬롯 - Running/Pending Job 수)
 async function getAvailableRuntimes(token) {
 
     if (!token) {
@@ -142,21 +142,29 @@ async function getAvailableRuntimes(token) {
         return 0;
     }
 
-    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Sessions/UiPath.Server.Configuration.OData.GetMachineSessionRuntimes`;
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-UIPATH-OrganizationUnitId': uipathFolderId
+    };
 
     try {
-        const response = await axios.get(apiUrl, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'X-UIPATH-OrganizationUnitId': uipathFolderId
-            }
-        });
+        // 1. 총 Unattended 슬롯 수 조회
+        const runtimesUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Sessions/UiPath.Server.Configuration.OData.GetMachineSessionRuntimes`;
+        const runtimesRes = await axios.get(runtimesUrl, { headers });
+        const runtimes = runtimesRes.data.value || [];
+        const totalSlots = runtimes
+            .filter(r => r.RuntimeType === 'Unattended')
+            .reduce((sum, r) => sum + r.Runtimes, 0);
 
-        const runtimes = response.data.value || [];
-        runtimes.forEach((r, i) => console.log(`   - Runtime[${i}]: ${r.MachineName || r.MachineId || ''} / Status: ${r.Status}`));
-        const availableCount = runtimes.filter(r => r.Status === 'Available').length;
-        console.log(`[${new Date().toLocaleString()}] 런타임 수: ${runtimes.length}, 가용: ${availableCount}`);
+        // 2. Running/Pending Job 수 조회
+        const jobsUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs?$filter=State eq 'Running' or State eq 'Pending'&$top=100`;
+        const jobsRes = await axios.get(jobsUrl, { headers });
+        const activeJobs = jobsRes.data.value || [];
+        activeJobs.forEach((j, i) => console.log(`   - Job[${i}]: Id=${j.Id}, State=${j.State}, ReleaseName=${j.ReleaseName}`));
+
+        const availableCount = totalSlots - activeJobs.length;
+        console.log(`[${new Date().toLocaleString()}] 총 슬롯: ${totalSlots}, 활성 Job: ${activeJobs.length}, 가용: ${availableCount}`);
         return availableCount;
 
     } catch (error) {
