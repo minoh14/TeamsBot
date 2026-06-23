@@ -18,8 +18,8 @@ const uipathTenantName = process.env.UiPathTenantName || '';
 const uipathFolderId = process.env.UiPathFolderId || '';
 const uipathProcessName = process.env.UiPathProcessName || '';
 const uipathQueueName = process.env.UiPathQueueName || '';
-//const uipathAuthScope = 'OR.Administration OR.Administration.Read OR.Administration.Write OR.Analytics OR.Analytics.Read OR.Analytics.Write OR.Assets OR.Assets.Read OR.Assets.Write OR.Audit OR.Audit.Read OR.Audit.Write OR.AutomationSolutions.Access OR.BackgroundTasks OR.BackgroundTasks.Read OR.BackgroundTasks.Write OR.Execution OR.Execution.Read OR.Execution.Write OR.Folders OR.Folders.Read OR.Folders.Write OR.Hypervisor OR.Hypervisor.Read OR.Hypervisor.Write OR.Jobs OR.Jobs.Read OR.Jobs.Write OR.License OR.License.Read OR.License.Write OR.Machines OR.Machines.Read OR.Machines.Write OR.ML OR.ML.Read OR.ML.Write OR.Monitoring OR.Monitoring.Read OR.Monitoring.Write OR.Queues OR.Queues.Read OR.Queues.Write OR.Robots OR.Robots.Read OR.Robots.Write OR.Settings OR.Settings.Read OR.Settings.Write OR.Tasks OR.Tasks.Read OR.Tasks.Write OR.TestDataQueues OR.TestDataQueues.Read OR.TestDataQueues.Write OR.TestSetExecutions OR.TestSetExecutions.Read OR.TestSetExecutions.Write OR.TestSets OR.TestSets.Read OR.TestSets.Write OR.TestSetSchedules OR.TestSetSchedules.Read OR.TestSetSchedules.Write OR.Users OR.Users.Read OR.Users.Write OR.Webhooks OR.Webhooks.Read OR.Webhooks.Write';
-const uipathAuthScope = 'OR.Jobs';
+const uipathAuthScope = 'OR.Administration OR.Administration.Read OR.Administration.Write OR.Analytics OR.Analytics.Read OR.Analytics.Write OR.Assets OR.Assets.Read OR.Assets.Write OR.Audit OR.Audit.Read OR.Audit.Write OR.AutomationSolutions.Access OR.BackgroundTasks OR.BackgroundTasks.Read OR.BackgroundTasks.Write OR.Execution OR.Execution.Read OR.Execution.Write OR.Folders OR.Folders.Read OR.Folders.Write OR.Hypervisor OR.Hypervisor.Read OR.Hypervisor.Write OR.Jobs OR.Jobs.Read OR.Jobs.Write OR.License OR.License.Read OR.License.Write OR.Machines OR.Machines.Read OR.Machines.Write OR.ML OR.ML.Read OR.ML.Write OR.Monitoring OR.Monitoring.Read OR.Monitoring.Write OR.Queues OR.Queues.Read OR.Queues.Write OR.Robots OR.Robots.Read OR.Robots.Write OR.Settings OR.Settings.Read OR.Settings.Write OR.Tasks OR.Tasks.Read OR.Tasks.Write OR.TestDataQueues OR.TestDataQueues.Read OR.TestDataQueues.Write OR.TestSetExecutions OR.TestSetExecutions.Read OR.TestSetExecutions.Write OR.TestSets OR.TestSets.Read OR.TestSets.Write OR.TestSetSchedules OR.TestSetSchedules.Read OR.TestSetSchedules.Write OR.Users OR.Users.Read OR.Users.Write OR.Webhooks OR.Webhooks.Read OR.Webhooks.Write';
+//const uipathAuthScope = 'OR.Jobs OR.Machines OR.Monitoring';
 
 // 모듈 내부 토큰 캐시 (getAccessToken 호출 시 자동 갱신됨)
 let cachedTokenObj = null;
@@ -134,7 +134,47 @@ async function runProcess(token, inputArguments) {
     }
 }
 
+// 가용한 로봇의 개수를 반환한다. (Available 상태의 런타임 개수)
+async function getAvailableRuntimes(token) {
+
+    if (!token) {
+        console.error('UiPath 인증 토큰이 없습니다. 로봇 가용 여부를 확인할 수 없습니다.');
+        return 0;
+    }
+
+    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Sessions/UiPath.Server.Configuration.OData.GetMachineSessionRuntimes`;
+
+    try {
+        const response = await axios.get(apiUrl, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-UIPATH-OrganizationUnitId': uipathFolderId
+            }
+        });
+
+        const runtimes = response.data.value || [];
+        runtimes.forEach((r, i) => console.log(`   - Runtime[${i}]: ${r.MachineName || r.MachineId || ''} / Status: ${r.Status}`));
+        const availableCount = runtimes.filter(r => r.Status === 'Available').length;
+        console.log(`[${new Date().toLocaleString()}] 런타임 수: ${runtimes.length}, 가용: ${availableCount}`);
+        return availableCount;
+
+    } catch (error) {
+        console.error('❌ 로봇 가용 여부 확인 실패:');
+        if (error.response) {
+            console.error(`   - Status: ${error.response.status}`);
+            console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+            console.error('   - Error: No response received from UiPath API.');
+        } else {
+            console.error(`   - Error: ${error.message}`);
+        }
+        return 0;
+    }
+}
+
 module.exports = {
     getAccessToken,
-    runProcess
+    runProcess,
+    getAvailableRuntimes
 };

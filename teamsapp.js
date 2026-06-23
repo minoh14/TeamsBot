@@ -5,6 +5,7 @@
 // 모듈 불러오기
 const UIPATH = require('./uipath');
 const MSGQUEUE = require('./msgqueue');
+const PROCQUEUE = require('./procqueue')
 
 // 필요한 패키지: npm install botbuilder restify dotenv @microsoft/microsoft-graph-client
 require('dotenv').config();
@@ -130,26 +131,18 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`정제 메시지: '${cleanText}'`);
             
             if (processTriggerKeywords.some(keyword => cleanText.includes(keyword))) {
-                // 메시지 안에 프로세스 트리거 키워드가 존재하면 프로세스를 실행한다.
 
-                await this.sendMessageToCurrentUser(appMessage2);
+                // 프로세스 큐에 추가한다.
+                PROCQUEUE.processQueue.enqueue({
+                    "id": userInfo.id,
+                    "name": userInfo.name,
+                    "email": userInfo.email,
+                    "response": cleanText
+                });
 
-                UIPATH.runProcess(
-                    this.uipathToken.token,
-                    {
-                        "g_polling_sec": pollingSec,
-                        "g_task_owner_ids": taskOwnerIds, // 국내 거래선 담당자 & 해외 거래선 담당자
-                        "g_user_info": {
-                            id: userInfo.id,
-                            name: userInfo.name,
-                            email: userInfo.email,
-                            //department: userInfo.department,
-                            //jobTitle: userInfo.jobTitle,
-                            //officeLocation: userInfo.officeLocation
-                        },
-                        "g_user_response": cleanText
-                    }
-                );
+                // 큐를 트리거해준다.
+                tryProcessRun();
+
             } else {
                 // 메시지 큐에 메시지 추가
                 MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
@@ -341,6 +334,42 @@ function triggerUipathTokenRenewal() {
     );
 }
 
+async function tryProcessRun() {
+    console.log(`[${new Date().toLocaleString()}] Trying process run...`)
+
+    if (PROCQUEUE.processQueue.isEmpty()) {
+        console.log('  Process queue is empty')
+        return;
+    }
+
+    const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token)
+    console.log(`  # available runtimes: ${availableRuntimes}`);
+
+    if (availableRuntimes > 0) {
+        item = PROCQUEUE.processQueue.dequeue();
+
+        await app.sendMessageToCurrentUser(appMessage2);
+
+        UIPATH.runProcess(
+            app.uipathToken.token,
+            {
+                "g_polling_sec": pollingSec,
+                "g_task_owner_ids": taskOwnerIds,
+                "g_user_info": {
+                    id: item.id,
+                    name: item.name,
+                    email: item.email
+                },
+                "g_user_response": item.response
+            }
+        );
+    }
+}
+
+function triggerProcessRun() {
+    setInterval(tryProcessRun, 10 * 1000);  // every 10 seconds
+}
+
 // Start Teams App REST server
 teamsAppServer.listen(appPort, () => {
     (async () => {
@@ -349,6 +378,7 @@ teamsAppServer.listen(appPort, () => {
         if (app.uipathToken) {
             console.log('\nUiPath와의 통신 준비 완료.\n');
             triggerUipathTokenRenewal();
+            triggerProcessRun();
         } else {
             throw new Error('\nUiPath 인증 실패로 인해 에이전트를 시작할 수 없습니다.');
         }
