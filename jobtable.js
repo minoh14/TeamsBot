@@ -13,8 +13,8 @@ class JobTable {
     }
 
     getJob(userId) {
-        if (this.table.has(userId)) {
-            return this.table.get(userId);
+        if (this.jobs.has(userId)) {
+            return this.jobs.get(userId);
         } else {
             return null;
         }
