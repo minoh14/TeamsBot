@@ -333,24 +333,36 @@ function triggerUipathTokenRenewal() {
 }
 
 async function runProcess(item) {
-    await app.createConversationAndSendMessage(item.id, appMessage2);
+    const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token);
+    console.log(`  # available runtimes: ${availableRuntimes}`);
 
-    const jobId = await UIPATH.runProcess(
-        app.uipathToken.token,
-        {
-            "g_polling_sec": pollingSec,
-            "g_task_owner_ids": taskOwnerIds,
-            "g_user_info": {
-                id: item.id,
-                name: item.name,
-                email: item.email
-            },
-            "g_user_response": item.response
+    if (availableRuntimes >= 2) {  // runtime이 두 개 이상 확보되었을 때에만 실행한다.
+        await app.createConversationAndSendMessage(item.id, appMessage2);
+
+        const jobId = await UIPATH.runProcess(
+            app.uipathToken.token,
+            {
+                "g_polling_sec": pollingSec,
+                "g_task_owner_ids": taskOwnerIds,
+                "g_user_info": {
+                    id: item.id,
+                    name: item.name,
+                    email: item.email
+                },
+                "g_user_response": item.response
+            }
+        );
+
+        if (jobId) {
+            JOBTABLE.table.setJob(item.id, jobId);
         }
-    );
+    } else {
+        if (!item.notified) {
+            await app.createConversationAndSendMessage(item.id, appMessage4);
+            item.notified = true;
+        }
 
-    if (jobId) {
-        JOBTABLE.table.setJob(item.id, jobId);
+        PROCQUEUE.queue.putBack(item);
     }
 }
 
@@ -362,33 +374,29 @@ async function tryProcessRun() {
         return;
     }
 
-    const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token)
-    console.log(`  # available runtimes: ${availableRuntimes}`);
-
-    if (availableRuntimes >= 2) {  // runtime이 두 개 이상 확보되었을 때에만 실행한다.
-        const item = PROCQUEUE.queue.dequeue();
-        if (item) {
-            const jobId = JOBTABLE.table.getJob(item.id);
-            if (jobId) {
-                const state = await UIPATH.getJobState(app.uipathToken.token, jobId);
+    const item = PROCQUEUE.queue.dequeue();
+    if (item) {
+        const jobId = JOBTABLE.table.getJob(item.id);
+        if (jobId) {
+            const state = await UIPATH.getJobState(app.uipathToken.token, jobId);
+            if (state) {
                 if (['FAULTED', 'SUCCESSFUL', 'STOPPED'].includes(state.toUpperCase())) {
-                    console.log('No job is currently running for this user.');
+                    console.log('No job is currently running for this user. 1');
                     await runProcess(item);
                 } else {
                     console.log(`Job ${jobId} is in '${state}' state. Not allowed to run a new job.`);
                     await app.createConversationAndSendMessage(item.id, appMessage5);
-                    //PROCQUEUE.queue.putBack(item);
                 }
-            } else {
+            } else {  // job의 상태를 얻어오지 못하면 새 job을 실행시켜주기로 한다.
+                console.log(`Job ${jobId} is in UNKNOWN state. Allow running a new job.`);
                 await runProcess(item);
             }
+        } else {
+            console.log('No job is currently running for this user. 2');
+            await runProcess(item);
         }
     } else {
-        let item = PROCQUEUE.queue.peek();
-        if (item && !item.notified) {
-            await app.createConversationAndSendMessage(item.id, appMessage4);
-            item.notified = true;
-        }
+        console.log('Something strange...');
     }
 }
 
