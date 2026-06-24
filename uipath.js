@@ -81,6 +81,7 @@ async function getAccessToken() {
 }
 
 // UiPath 프로세스 실행 함수
+// job id를 반환한다.
 async function runProcess(token, inputArguments) {
 
     if (!token) {
@@ -112,7 +113,7 @@ async function runProcess(token, inputArguments) {
         console.log(`[${new Date().toLocaleString()}] ✅ UiPath 프로세스 실행 성공.`);
         console.log(`   - Status: ${response.status}`);
         console.log(`   - Job ID: ${response.data.value[0].Id}`);
-        return response.data;
+        return response.data.value[0].Id;
 
     } catch (error) {
 
@@ -181,8 +182,47 @@ async function getAvailableRuntimes(token) {
     }
 }
 
+// job의 상태를 반환한다.
+// Pending, Running, Stopping, Terminating, Faulted, Successful, Stopped, Suspended, Resumed
+async function getJobState(token, jobId) {
+
+    if (!token) {
+        console.error('UiPath 인증 토큰이 없습니다. Job 상태를 확인할 수 없습니다.');
+        return null;
+    }
+
+    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs(${jobId})`;
+
+    try {
+        const response = await axios.get(apiUrl, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-UIPATH-OrganizationUnitId': uipathFolderId
+            }
+        });
+
+        const state = response.data.State;
+        console.log(`[${new Date().toLocaleString()}] Job ${jobId} 상태: ${state}`);
+        return state;
+
+    } catch (error) {
+        console.error(`❌ Job ${jobId} 상태 확인 실패:`);
+        if (error.response) {
+            console.error(`   - Status: ${error.response.status}`);
+            console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+            console.error('   - Error: No response received from UiPath API.');
+        } else {
+            console.error(`   - Error: ${error.message}`);
+        }
+        return null;
+    }
+}
+
 module.exports = {
     getAccessToken,
     runProcess,
-    getAvailableRuntimes
+    getAvailableRuntimes,
+    getJobState
 };

@@ -6,6 +6,7 @@
 const UIPATH = require('./uipath');
 const MSGQUEUE = require('./msgqueue');
 const PROCQUEUE = require('./procqueue')
+const JOBTABLE = require('./jobtable')
 
 // 필요한 패키지: npm install botbuilder restify dotenv @microsoft/microsoft-graph-client
 require('dotenv').config();
@@ -135,7 +136,7 @@ class TeamsApp extends TeamsActivityHandler {
             if (processTriggerKeywords.some(keyword => cleanText.replace(/\s/g, '').toUpperCase().includes(keyword))) {
 
                 // 프로세스 큐에 추가한다.
-                PROCQUEUE.processQueue.enqueue({
+                PROCQUEUE.queue.enqueue({
                     "id": userInfo.id,
                     "name": userInfo.name,
                     "email": userInfo.email,
@@ -330,10 +331,32 @@ function triggerUipathTokenRenewal() {
     );
 }
 
+async function runProcess(item) {
+    await app.createConversationAndSendMessage(item.id, appMessage2);
+
+    const jobId = await UIPATH.runProcess(
+        app.uipathToken.token,
+        {
+            "g_polling_sec": pollingSec,
+            "g_task_owner_ids": taskOwnerIds,
+            "g_user_info": {
+                id: item.id,
+                name: item.name,
+                email: item.email
+            },
+            "g_user_response": item.response
+        }
+    );
+
+    if (jobId) {
+        JOBTABLE.table.setJob(item.id, jobId);
+    }
+}
+
 async function tryProcessRun() {
     console.log(`[${new Date().toLocaleString()}] Trying process run...`)
 
-    if (PROCQUEUE.processQueue.isEmpty()) {
+    if (PROCQUEUE.queue.isEmpty()) {
         console.log('  Process queue is empty')
         return;
     }
@@ -342,27 +365,25 @@ async function tryProcessRun() {
     console.log(`  # available runtimes: ${availableRuntimes}`);
 
     if (availableRuntimes >= 2) {  // runtime이 두 개 이상 확보되었을 때에만 실행한다.
-        const item = PROCQUEUE.processQueue.dequeue();
-
+        const item = PROCQUEUE.queue.dequeue();
         if (item) {
-            await app.createConversationAndSendMessage(item.id, appMessage2);
-
-            UIPATH.runProcess(
-                app.uipathToken.token,
-                {
-                    "g_polling_sec": pollingSec,
-                    "g_task_owner_ids": taskOwnerIds,
-                    "g_user_info": {
-                        id: item.id,
-                        name: item.name,
-                        email: item.email
-                    },
-                    "g_user_response": item.response
+            const jobId = JOBTABLE.table.getJob(item.id);
+            if (jobId) {
+                const state = UIPATH.getJobState(app.uipathToken.token, jobId);
+                if (['FAULTED', 'SUCCESSFUL', 'STOPPED'].includes(state.toUpperCase())) {
+                    console.log('No job is currently running for this user.');
+                    await runProcess(item);
+                } else {
+                    console.log(`Job ${jobId} is in '${state}' state. Not allowed to run a new job.`);
+                    await app.createConversationAndSendMessage(item.id, appMessage5);
+                    PROCQUEUE.queue.putBack(item);
                 }
-            );
+            } else {
+                await runProcess(item);
+            }
         }
     } else {
-        let item = PROCQUEUE.processQueue.peek();
+        let item = PROCQUEUE.queue.peek();
         if (item && !item.notified) {
             await app.createConversationAndSendMessage(item.id, appMessage4);
             item.notified = true;
@@ -440,18 +461,3 @@ teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
         res.send(500, '오류 발생');
     }
 });
-/*
-// Teams App 메시지 전송 엔드포인트 (현재 대화중인 사용자)
-teamsAppServer.post('/api/sendMessageToCurrentUser', apiKeyAuth, async (req, res) => {
-    const { message } = req.body;
-
-    if (!message) {
-        console.log('message 필드가 없습니다.');
-        res.send(400, 'message 필드가 필요합니다.');
-        return;
-    }
-
-    await app.sendMessageToCurrentUser(message);
-    res.send('현재 대화중인 사용자에게 메시지를 보냈습니다.');
-});
-*/

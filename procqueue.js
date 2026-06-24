@@ -28,10 +28,14 @@ class ProcessQueue {
         }
         return this.queue.shift();
     }
+
+    putBack(item) {
+        this.queue.unshift(item);
+    }
 }
 
-const processQueue = new ProcessQueue();
+const queue = new ProcessQueue();
 
 module.exports = {
-    processQueue
+    queue
 };

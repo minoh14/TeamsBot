@@ -7,3 +7,4 @@ const UIPATH = require('./uipath');
 const TEAMSAPP = require('./teamsapp');
 const MSGQUEUE = require('./msgqueue');
 const PROCQUEUE = require('./procqueue')
+const JOBTABLE = require('./jobtable')
