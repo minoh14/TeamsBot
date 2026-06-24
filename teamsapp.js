@@ -41,6 +41,7 @@ const appMessage1 = process.env.AppMessage1 || '';
 const appMessage2 = process.env.AppMessage2 || '';
 const appMessage3 = process.env.AppMessage3 || '';
 const appMessage4 = process.env.AppMessage4 || '';
+const appMessage5 = process.env.AppMessage5 || '';
 
 // API Key Authentication
 const apiKeyAuth = (req, res, next) => {
