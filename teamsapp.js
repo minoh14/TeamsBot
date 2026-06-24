@@ -39,6 +39,7 @@ const taskOwnerIds = process.env.TaskOwnerIds ? process.env.TaskOwnerIds.split('
 const appMessage1 = process.env.AppMessage1 || '';
 const appMessage2 = process.env.AppMessage2 || '';
 const appMessage3 = process.env.AppMessage3 || '';
+const appMessage4 = process.env.AppMessage4 || '';
 
 // API Key Authentication
 const apiKeyAuth = (req, res, next) => {
@@ -214,13 +215,6 @@ class TeamsApp extends TeamsActivityHandler {
             //jobTitle: user.jobTitle,
             //officeLocation: user.officeLocation
         };
-        
-        /*
-        return {
-            id: context.activity.from.id,
-            name: context.activity.from.name
-        };
-        */
     }
 
     // Send message to the current user in conversation
@@ -364,6 +358,8 @@ async function tryProcessRun() {
                 "g_user_response": item.response
             }
         );
+    } else {
+        await app.sendMessageToCurrentUser(appMessage4);
     }
 }
 
