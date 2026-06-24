@@ -15,6 +15,13 @@ class ProcessQueue {
         this.queue.push(item);
     }
 
+    peek() {
+        if (this.isEmpty()) {
+            return null;
+        }
+        return this.queue[0];
+    }
+
     dequeue() {
         if (this.isEmpty()) {
             return null;

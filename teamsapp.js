@@ -139,7 +139,8 @@ class TeamsApp extends TeamsActivityHandler {
                     "id": userInfo.id,
                     "name": userInfo.name,
                     "email": userInfo.email,
-                    "response": cleanText
+                    "response": cleanText,
+                    "notified": false  // 사용자에게 알림 발송 여부
                 });
 
                 // 큐를 트리거해준다.
@@ -341,25 +342,31 @@ async function tryProcessRun() {
     console.log(`  # available runtimes: ${availableRuntimes}`);
 
     if (availableRuntimes >= 2) {  // runtime이 두 개 이상 확보되었을 때에만 실행한다.
-        item = PROCQUEUE.processQueue.dequeue();
+        const item = PROCQUEUE.processQueue.dequeue();
 
-        await app.sendMessageToCurrentUser(appMessage2);
+        if (item) {
+            await app.createConversationAndSendMessage(item.id, appMessage2);
 
-        UIPATH.runProcess(
-            app.uipathToken.token,
-            {
-                "g_polling_sec": pollingSec,
-                "g_task_owner_ids": taskOwnerIds,
-                "g_user_info": {
-                    id: item.id,
-                    name: item.name,
-                    email: item.email
-                },
-                "g_user_response": item.response
-            }
-        );
+            UIPATH.runProcess(
+                app.uipathToken.token,
+                {
+                    "g_polling_sec": pollingSec,
+                    "g_task_owner_ids": taskOwnerIds,
+                    "g_user_info": {
+                        id: item.id,
+                        name: item.name,
+                        email: item.email
+                    },
+                    "g_user_response": item.response
+                }
+            );
+        }
     } else {
-        await app.sendMessageToCurrentUser(appMessage4);
+        let item = PROCQUEUE.processQueue.peek();
+        if (item && !item.notified) {
+            await app.createConversationAndSendMessage(item.id, appMessage4);
+            item.notified = true;
+        }
     }
 }
 
