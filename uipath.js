@@ -135,7 +135,7 @@ async function runProcess(token, inputArguments) {
     }
 }
 
-// 가용한 런타임 수를 반환한다. (총 Unattended 슬롯 - Running/Pending Job 수)
+// 가용한 런타임 수를 반환한다. (총 Unattended 슬롯 - UsedRuntimes)
 async function getAvailableRuntimes(token) {
 
     if (!token) {
@@ -150,22 +150,15 @@ async function getAvailableRuntimes(token) {
     };
 
     try {
-        // 1. 총 Unattended 슬롯 수 조회
         const runtimesUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Sessions/UiPath.Server.Configuration.OData.GetMachineSessionRuntimes`;
         const runtimesRes = await axios.get(runtimesUrl, { headers });
         const runtimes = runtimesRes.data.value || [];
-        const totalSlots = runtimes
-            .filter(r => r.RuntimeType === 'Unattended')
-            .reduce((sum, r) => sum + r.Runtimes, 0);
+        const unattended = runtimes.filter(r => r.RuntimeType === 'Unattended');
+        const totalSlots = unattended.reduce((sum, r) => sum + r.Runtimes, 0);
+        const usedSlots = unattended.reduce((sum, r) => sum + r.UsedRuntimes, 0);
 
-        // 2. Running/Pending Job 수 조회
-        const jobsUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs?$filter=State eq 'Running' or State eq 'Pending'&$top=100`;
-        const jobsRes = await axios.get(jobsUrl, { headers });
-        const activeJobs = jobsRes.data.value || [];
-        activeJobs.forEach((j, i) => console.log(`   - Job[${i}]: Id=${j.Id}, State=${j.State}, ReleaseName=${j.ReleaseName}`));
-
-        const availableCount = totalSlots - activeJobs.length;
-        console.log(`[${new Date().toLocaleString()}] 총 슬롯: ${totalSlots}, 활성 Job: ${activeJobs.length}, 가용: ${availableCount}`);
+        const availableCount = totalSlots - usedSlots;
+        console.log(`[${new Date().toLocaleString()}] 총 슬롯: ${totalSlots}, 사용중: ${usedSlots}, 가용: ${availableCount}`);
         return availableCount;
 
     } catch (error) {
