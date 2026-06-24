@@ -370,7 +370,7 @@ async function tryProcessRun() {
         if (item) {
             const jobId = JOBTABLE.table.getJob(item.id);
             if (jobId) {
-                const state = UIPATH.getJobState(app.uipathToken.token, jobId);
+                const state = await UIPATH.getJobState(app.uipathToken.token, jobId);
                 if (['FAULTED', 'SUCCESSFUL', 'STOPPED'].includes(state.toUpperCase())) {
                     console.log('No job is currently running for this user.');
                     await runProcess(item);
