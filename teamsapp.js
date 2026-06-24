@@ -377,7 +377,7 @@ async function tryProcessRun() {
                 } else {
                     console.log(`Job ${jobId} is in '${state}' state. Not allowed to run a new job.`);
                     await app.createConversationAndSendMessage(item.id, appMessage5);
-                    PROCQUEUE.queue.putBack(item);
+                    //PROCQUEUE.queue.putBack(item);
                 }
             } else {
                 await runProcess(item);
