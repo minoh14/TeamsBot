@@ -20,6 +20,7 @@ const uipathProcessName = process.env.UiPathProcessName || '';
 const uipathQueueName = process.env.UiPathQueueName || '';
 const uipathAuthScope = 'OR.Administration OR.Administration.Read OR.Administration.Write OR.Analytics OR.Analytics.Read OR.Analytics.Write OR.Assets OR.Assets.Read OR.Assets.Write OR.Audit OR.Audit.Read OR.Audit.Write OR.AutomationSolutions.Access OR.BackgroundTasks OR.BackgroundTasks.Read OR.BackgroundTasks.Write OR.Execution OR.Execution.Read OR.Execution.Write OR.Folders OR.Folders.Read OR.Folders.Write OR.Hypervisor OR.Hypervisor.Read OR.Hypervisor.Write OR.Jobs OR.Jobs.Read OR.Jobs.Write OR.License OR.License.Read OR.License.Write OR.Machines OR.Machines.Read OR.Machines.Write OR.ML OR.ML.Read OR.ML.Write OR.Monitoring OR.Monitoring.Read OR.Monitoring.Write OR.Queues OR.Queues.Read OR.Queues.Write OR.Robots OR.Robots.Read OR.Robots.Write OR.Settings OR.Settings.Read OR.Settings.Write OR.Tasks OR.Tasks.Read OR.Tasks.Write OR.TestDataQueues OR.TestDataQueues.Read OR.TestDataQueues.Write OR.TestSetExecutions OR.TestSetExecutions.Read OR.TestSetExecutions.Write OR.TestSets OR.TestSets.Read OR.TestSets.Write OR.TestSetSchedules OR.TestSetSchedules.Read OR.TestSetSchedules.Write OR.Users OR.Users.Read OR.Users.Write OR.Webhooks OR.Webhooks.Read OR.Webhooks.Write';
 //const uipathAuthScope = 'OR.Jobs OR.Machines OR.Monitoring';
+const uipathASRobotName = process.env.UiPathASRobotName || '[Default] Automation Suite Robot';
 
 // 모듈 내부 토큰 캐시 (getAccessToken 호출 시 자동 갱신됨)
 let cachedTokenObj = null;
@@ -143,23 +144,58 @@ async function getAvailableRuntimes(token) {
         return 0;
     }
 
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'X-UIPATH-OrganizationUnitId': uipathFolderId
-    };
-
     try {
-        const runtimesUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Sessions/UiPath.Server.Configuration.OData.GetMachineSessionRuntimes`;
-        const runtimesRes = await axios.get(runtimesUrl, { headers });
-        const runtimes = runtimesRes.data.value || [];
-        const unattended = runtimes.filter(r => r.RuntimeType === 'Unattended');
-        const totalSlots = unattended.reduce((sum, r) => sum + r.Runtimes, 0);
-        const usedSlots = unattended.reduce((sum, r) => sum + r.UsedRuntimes, 0);
+        // 특정 머신의 Total Runtimes 조회
 
-        const availableCount = totalSlots - usedSlots;
-        console.log(`[${new Date().toLocaleString()}] 총 슬롯: ${totalSlots}, 사용중: ${usedSlots}, 가용: ${availableCount}`);
-        return availableCount;
+        const machineUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Machines`;
+        const machineRes = await axios.get(machineUrl, {
+            params: {
+                $filter: `Name eq '${uipathASRobotName}'`
+            },
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        const machineData = machineRes.data;
+        //console.log(machineData);
+
+        if (!machineData.value || machineData.value.length === 0) {
+            console.error(`'${uipathASRobotName}' not found!`);
+            return 0;
+        }
+
+        const machine = machineData.value[0];
+        const machineId = machine.Id;
+        const totalRuntimes = machine.UnattendedSlots || 0;
+
+        console.log(`Total Runtimes=${totalRuntimes}`);
+
+        // 해당 머신에서 실행 중인 job 수 조회
+
+        const jobsUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs`;
+        const jobsRes = await axios.get(jobsUrl, {
+            params: {
+                //$filter: `State eq 'Running' and HostMachineName eq ${MACHINE_NAME}`
+                $filter: `State eq 'Running'`,
+                $select: 'Id,State,HostMachineName'
+            },
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-UIPATH-OrganizationUnitId': uipathFolderId
+            }
+        });
+        const jobsData = jobsRes.data;
+        //console.log(jobsData);
+
+        const longNameJobs = (jobsData.value || []).filter(j => (j.HostMachineName ?? '').length > 'LGITGVDI04V646'.length);
+        const runtimesInUse = longNameJobs.length;
+        console.log(`Running jobs (licenses in use): ${runtimesInUse}`);
+
+        const availableRuntimes = totalRuntimes - runtimesInUse;
+
+        return availableRuntimes;
 
     } catch (error) {
         console.error('❌ 로봇 가용 여부 확인 실패:');
