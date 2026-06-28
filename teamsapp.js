@@ -36,6 +36,7 @@ const pollingSec = process.env.PollingIntervalSeconds || 3;
 const processTriggerInterval = process.env.ProcessTriggerInterval || 10;
 const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
 const textFormat = process.env.TextFormat || 'markdown';
+const requiredRuntimes = process.env.RequiredRuntimes || 0;
 const taskOwnerIds = process.env.TaskOwnerIds ? process.env.TaskOwnerIds.split(' ') : [];
 const appMessage1 = process.env.AppMessage1 || '';
 const appMessage2 = process.env.AppMessage2 || '';
@@ -336,7 +337,7 @@ async function runProcess(item) {
     const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token);
     console.log(`  # available runtimes: ${availableRuntimes}`);
 
-    if (availableRuntimes >= 2) {  // runtime이 두 개 이상 확보되었을 때에만 실행한다.
+    if (availableRuntimes >= requiredRuntimes) {  // runtime이 필요한 숫자 이상으로 확보되었을 때에만 실행한다.
         await app.createConversationAndSendMessage(item.id, appMessage2);
 
         const jobId = await UIPATH.runProcess(
