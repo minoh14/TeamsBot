@@ -17,6 +17,7 @@ const messageQueueApiKey = process.env.MessageQueueApiKey || '';
 const uipathWebhookUrl = process.env.UiPathWebhookUrl || '';
 const uipathWebhookKey = process.env.UiPathWebhookKey || '';
 const uipathWebhookFormat = process.env.UiPathWebhookFormat || 'x-uipath-webhookkey';
+const uipathWebhookRetryAfter = process.env.UiPathWebhookRetryAfter || 1;
 
 // API Key Authentication
 const apiKeyAuth = (req, res, next) => {
@@ -77,36 +78,47 @@ class MessageQueue {
 
         if (uipathWebhookUrl) {
             // UiPath Webhook URL로 알림
-            axios.post(uipathWebhookUrl,
-                {
-                    user_id: id,
-                    message: message
-                },
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        uipathWebhookFormat: uipathWebhookKey
-                    }
+            const postData = {
+                user_id: id,
+                message: message
+            };
+            const postConfig = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    uipathWebhookFormat: uipathWebhookKey
                 }
-            )
+            };
+
+            axios.post(uipathWebhookUrl, postData, postConfig)
             .then(response => {
                 console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 알림 성공.`);
                 console.log(`   - Status: ${response.status}`);
             })
             .catch(error => {
-                // Webhook 알림 실패 시에는 메시지를 큐에 추가
+                console.error(`[${new Date().toLocaleString()}] ⚠️ UiPath Webhook 1차 시도 실패, 잠시 후 재시도...`);
+                // 잠시 대기 후 재시도
+                return new Promise(resolve => setTimeout(resolve, uipathWebhookRetryAfter * 1000))
+                .then(() => axios.post(uipathWebhookUrl, postData, postConfig))
+                .then(response => {
+                    console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 재시도 성공.`);
+                    console.log(`   - Status: ${response.status}`);
+                });
+            })
+            .catch(error => {
+                // 재시도도 실패할 경우 메시지를 큐에 추가
                 this.queue.get(id).push(message);
 
                 if (error.response) {
-                    // 서버가 에러 응답을 반환한 경우 (e.g., 400, 401, 403)
-                    console.error('❌ UiPath Webhook 알림 실패:');
+                    console.error(`[${new Date().toLocaleString()}] ❌ UiPath Webhook 알림 최종 실패:`);
                     console.error(`   - Status: ${error.response.status}`);
                     console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
                 } else {
-                    console.error('❌ UiPath Webhook 알림 실패:');
+                    console.error(`[${new Date().toLocaleString()}] ❌ UiPath Webhook 알림 최종 실패:`);
                     console.error(`   - Message: ${error.message}`);
                 }
             });
+        } else {
+            console.log('Webhook URL is empty!');
         }
     }
 
