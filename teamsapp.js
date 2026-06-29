@@ -17,7 +17,8 @@ const {
     TeamsActivityHandler,
     TurnContext,
     MessageFactory,
-    ConfigurationBotFrameworkAuthentication
+    ConfigurationBotFrameworkAuthentication,
+    ActivityTypes
 } = require('botbuilder');
 const { Client } = require('@microsoft/microsoft-graph-client');
 const { ClientSecretCredential } = require('@azure/identity');
@@ -242,65 +243,75 @@ class TeamsApp extends TeamsActivityHandler {
         );
     }
 
-    // Create conversation and send message to a specific user
-    async createConversationAndSendMessage(userId, text) {
-        try {
-            const appCredentials = new MicrosoftAppCredentials(
-                appId,
-                appPassword,
-                appTenantId
-            );
+    async createConversationAndContinue(userId, callback) {
+        const appCredentials = new MicrosoftAppCredentials(
+            appId,
+            appPassword,
+            appTenantId
+        );
 
-            const connectorClient = new ConnectorClient(appCredentials, { baseUri: this.conversationReference.serviceUrl });
+        const connectorClient = new ConnectorClient(appCredentials, { baseUri: this.conversationReference.serviceUrl });
 
-            const conversationParameters = {
-                isGroup: false,
-                tenantId: appTenantId,
-                bot: {
-                    id: this.conversationReference.bot.id,
-                    name: this.conversationReference.bot.name
-                },
-                members: [
-                    {
-                        id: userId
-                    }
-                ]
-            };
-
-            const response = await connectorClient.conversations.createConversation(conversationParameters);
-
-            const convRef = {
-                activityId: response.activityId,
-                channelId: 'msteams',
-                serviceUrl: this.conversationReference.serviceUrl,
-                conversation: {
-                    id: response.id,
-                    tenantId: appTenantId,
-                    conversationType: 'personal'
-                },
-                bot: {
-                    id: this.conversationReference.bot.id,
-                    name: this.conversationReference.bot.name
-                },
-                user: {
+        const conversationParameters = {
+            isGroup: false,
+            tenantId: appTenantId,
+            bot: {
+                id: this.conversationReference.bot.id,
+                name: this.conversationReference.bot.name
+            },
+            members: [
+                {
                     id: userId
                 }
-            };
+            ]
+        };
 
-            await adapter.continueConversationAsync(
-                appId,
-                convRef,
-                async (context) => {
-                    const message = MessageFactory.text(text);
-                    message.textFormat = textFormat;
-                    await context.sendActivity(message);
-                }
-            );
+        const response = await connectorClient.conversations.createConversation(conversationParameters);
 
+        const convRef = {
+            activityId: response.activityId,
+            channelId: 'msteams',
+            serviceUrl: this.conversationReference.serviceUrl,
+            conversation: {
+                id: response.id,
+                tenantId: appTenantId,
+                conversationType: 'personal'
+            },
+            bot: {
+                id: this.conversationReference.bot.id,
+                name: this.conversationReference.bot.name
+            },
+            user: {
+                id: userId
+            }
+        };
+
+        await adapter.continueConversationAsync(appId, convRef, callback);
+    }
+
+    // Send message to a specific user
+    async createConversationAndSendMessage(userId, text) {
+        try {
+            await this.createConversationAndContinue(userId, async (context) => {
+                const message = MessageFactory.text(text);
+                message.textFormat = textFormat;
+                await context.sendActivity(message);
+            });
             console.log(`사용자 '${userId}'에게 메시지 전송 완료.`);
-
         } catch (error) {
             console.error(`사용자 '${userId}'에게 메시지 전송 중 오류 발생: ${error}`);
+        }
+    }
+
+    // Send typing indicator to a specific user
+    async createConversationAndSendTypingIndicator(userId) {
+        try {
+            await this.createConversationAndContinue(userId, async (context) => {
+                await context.sendActivity({ type: ActivityTypes.Typing });
+            });
+            console.log(`사용자 '${userId}'에게 typing indicator 전송 완료.`);
+        } catch (error) {
+            console.error(`사용자 '${userId}'에게 typing indicator 전송 중 오류 발생: ${error}`);
         }
     }
 }
@@ -466,6 +477,23 @@ teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
     try {
         await app.createConversationAndSendMessage(userId, message);
         res.send(`사용자 ${userId}에게 메시지를 보냈습니다.`);
+    } catch (err) {
+        console.error('★ 엔드포인트 에러:', err);
+        res.send(500, '오류 발생');
+    }
+});
+
+teamsAppServer.post('/api/sendTypingIndicator', apiKeyAuth, async (req, res) => {
+    const { userId } = req.body;
+
+    if (!userId) {
+        res.send(400, 'userId 필드가 필요합니다.');
+        return;
+    }
+
+    try {
+        await app.createConversationAndSendTypingIndicator(userId);
+        res.send(`사용자 ${userId}에게 typing indicator를 보냈습니다.`);
     } catch (err) {
         console.error('★ 엔드포인트 에러:', err);
         res.send(500, '오류 발생');
