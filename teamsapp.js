@@ -379,10 +379,7 @@ async function runProcess(item) {
 }
 
 async function tryProcessRun() {
-    console.log(`[${new Date().toLocaleString()}] Trying process run...`)
-
     if (PROCQUEUE.queue.isEmpty()) {
-        console.log('  Process queue is empty')
         return;
     }
 
@@ -393,7 +390,6 @@ async function tryProcessRun() {
             const state = await UIPATH.getJobState(app.uipathToken.token, jobId);
             if (state) {
                 if (['FAULTED', 'SUCCESSFUL', 'STOPPED'].includes(state.toUpperCase())) {
-                    console.log('No job is currently running for this user. 1');
                     await runProcess(item);
                 } else {
                     console.log(`Job ${jobId} is in '${state}' state. Not allowed to run a new job.`);
@@ -404,7 +400,6 @@ async function tryProcessRun() {
                 await runProcess(item);
             }
         } else {
-            console.log('No job is currently running for this user. 2');
             await runProcess(item);
         }
     } else {
