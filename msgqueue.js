@@ -95,25 +95,15 @@ class MessageQueue {
                 console.log(`   - Status: ${response.status}`);
             })
             .catch(error => {
-                console.error(`[${new Date().toLocaleString()}] ⚠️ UiPath Webhook 1차 시도 실패, 잠시 후 재시도...`);
-                // 잠시 대기 후 재시도
-                return new Promise(resolve => setTimeout(resolve, uipathWebhookRetryAfter * 1000))
-                .then(() => axios.post(uipathWebhookUrl, postData, postConfig))
-                .then(response => {
-                    console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 재시도 성공.`);
-                    console.log(`   - Status: ${response.status}`);
-                });
-            })
-            .catch(error => {
-                // 재시도도 실패할 경우 메시지를 큐에 추가
+                // 실패할 경우 메시지를 큐에 추가
                 this.queue.get(id).push(message);
 
                 if (error.response) {
-                    console.error(`[${new Date().toLocaleString()}] ❌ UiPath Webhook 알림 최종 실패:`);
+                    console.error(`[${new Date().toLocaleString()}] ❌ UiPath Webhook 알림 실패:`);
                     console.error(`   - Status: ${error.response.status}`);
                     console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
                 } else {
-                    console.error(`[${new Date().toLocaleString()}] ❌ UiPath Webhook 알림 최종 실패:`);
+                    console.error(`[${new Date().toLocaleString()}] ❌ UiPath Webhook 알림 실패:`);
                     console.error(`   - Message: ${error.message}`);
                 }
             });
