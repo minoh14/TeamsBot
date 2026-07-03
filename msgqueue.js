@@ -24,7 +24,7 @@ const apiKeyAuth = (req, res, next) => {
     const clientKey = req.headers['x-api-key'];
 
     if (!clientKey) {
-        console.error('MQ API Key missing in HTTP request header!');
+        console.error(`[${new Date().toLocaleString()}] MQ API Key missing in HTTP request header!`);
         return res.send(403, { error: '권한이 없습니다.' })
     }
 
@@ -39,11 +39,11 @@ const apiKeyAuth = (req, res, next) => {
             //console.log('MQ API key identical');
             next();
         } else {
-            console.error('MQ API Key NOT identical!');
+            console.error(`[${new Date().toLocaleString()}] MQ API Key NOT identical!`);
             res.send(403, { error: '권한이 없습니다.' })
         }
     } catch (e) {
-        console.error('MQ API Key NOT same length!');
+        console.error(`[${new Date().toLocaleString()}] MQ API Key NOT same length!`);
         res.send(403, { error: '권한이 없습니다.' })
     }
 };
@@ -162,7 +162,7 @@ msgQueueServer.listen(msgPort, () => {
 msgQueueServer.post('/reset', apiKeyAuth, async (req, res) => {
     const id = req.body.id;
     msgQueue.reset(id);
-    console.log(`Message Queue ${id}가 초기화되었습니다.`);
+    console.log(`[${new Date().toLocaleString()}] Message Queue ${id}가 초기화되었습니다.`);
     res.send(`Message Queue ${id}가 초기화되었습니다.`);
 });
 
@@ -171,7 +171,7 @@ msgQueueServer.post('/dequeue', apiKeyAuth, async (req, res) => {
     const id = req.body.id;
     const message = msgQueue.dequeue(id);
     if (message) {
-        console.log(`Dequeued message: ${message}`);
+        console.log(`[${new Date().toLocaleString()}] Dequeued message: ${message}`);
         res.send({ message: message });
     } else {
         //console.log('Message Queue is empty.');

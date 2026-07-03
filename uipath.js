@@ -50,7 +50,7 @@ async function getAccessToken() {
         const expiresIn = response.data.expires_in; // 만료 시간(초)
         const tokenType = response.data.token_type; // (e.g., "Bearer")
 
-        console.log('✅ UiPath 인증 토큰 가져오기 성공:');
+        console.log(`[${new Date().toLocaleString()}] ✅ UiPath 인증 토큰 가져오기 성공:`);
         console.log(`   - Token Type: ${tokenType}`);
         console.log(`   - Expires In: ${expiresIn} 초`);
         console.log(`   - Access Token: ${accessToken.substring(0, 20)}...`); // 보안을 위하여 토큰 일부만 출력
@@ -63,7 +63,7 @@ async function getAccessToken() {
 
     } catch (error) {
 
-        console.error('❌ UiPath 인증 토큰 가져오기 실패:');
+        console.error(`[${new Date().toLocaleString()}] ❌ UiPath 인증 토큰 가져오기 실패:`);
 
         if (error.response) {
             // 서버가 에러 응답을 반환한 경우 (e.g., 400, 401, 403)
@@ -87,7 +87,7 @@ async function getAccessToken() {
 async function runProcess(token, inputArguments) {
 
     if (!token) {
-        console.error('UiPath 인증 토큰이 없습니다. 프로세스를 실행할 수 없습니다.');
+        console.error(`[${new Date().toLocaleString()}] UiPath 인증 토큰이 없습니다. 프로세스를 실행할 수 없습니다.`);
         return null;
     }
 
@@ -119,7 +119,7 @@ async function runProcess(token, inputArguments) {
 
     } catch (error) {
 
-        console.error('❌ UiPath 프로세스 실행 실패:');
+        console.error(`[${new Date().toLocaleString()}] ❌ UiPath 프로세스 실행 실패:`);
 
         if (error.response) {
             // 서버가 에러 응답을 반환한 경우 (e.g., 400, 401, 403)
@@ -141,7 +141,7 @@ async function runProcess(token, inputArguments) {
 async function getAvailableRuntimes(token) {
 
     if (!token) {
-        console.error('UiPath 인증 토큰이 없습니다. 로봇 가용 여부를 확인할 수 없습니다.');
+        console.error(`[${new Date().toLocaleString()}] UiPath 인증 토큰이 없습니다. 로봇 가용 여부를 확인할 수 없습니다.`);
         return 0;
     }
 
@@ -195,11 +195,12 @@ async function getAvailableRuntimes(token) {
         console.log(`Running jobs (licenses in use): ${runtimesInUse}`);
 
         const availableRuntimes = totalRuntimes - runtimesInUse;
+        console.log(`Available Runtimes            : ${availableRuntimes}`);
 
         return availableRuntimes;
 
     } catch (error) {
-        console.error('❌ 로봇 가용 여부 확인 실패:');
+        console.error(`[${new Date().toLocaleString()}] ❌ 로봇 가용 여부 확인 실패:`);
         if (error.response) {
             console.error(`   - Status: ${error.response.status}`);
             console.error(`   - Data: ${JSON.stringify(error.response.data)}`);

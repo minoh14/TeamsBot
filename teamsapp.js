@@ -171,7 +171,7 @@ class TeamsApp extends TeamsActivityHandler {
 
         // 채널에서의 대화 업데이트 핸들러
         this.onTeamsChannelCreated(async (channelInfo, teamInfo, context, next) => {
-            console.log(`새 채널 생성: ${channelInfo.name}`);
+            console.log(`[${new Date().toLocaleString()}] 새 채널 생성: ${channelInfo.name}`);
             await next();
         });
     }
@@ -191,7 +191,7 @@ class TeamsApp extends TeamsActivityHandler {
 
             return tokenResponse.token;
         } catch (error) {
-            console.error('Graph 토큰을 가져오는 중 오류 발생:', error.message);
+            console.error(`[${new Date().toLocaleString()}] Graph 토큰을 가져오는 중 오류 발생: ${error.message}`);
             throw error;
         }
     }
@@ -225,7 +225,7 @@ class TeamsApp extends TeamsActivityHandler {
     // Send message to the current user in conversation
     async sendMessageToCurrentUser(text) {
         if (!this.conversationReference) {
-            console.error('대화 참조 정보가 없습니다. 메시지를 보낼 수 없습니다.');
+            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보가 없습니다. 메시지를 보낼 수 없습니다.`);
             return;
         }
 
@@ -297,9 +297,9 @@ class TeamsApp extends TeamsActivityHandler {
                 message.textFormat = textFormat;
                 await context.sendActivity(message);
             });
-            console.log(`사용자 '${userId}'에게 메시지 전송 완료.`);
+            console.log(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 완료.`);
         } catch (error) {
-            console.error(`사용자 '${userId}'에게 메시지 전송 중 오류 발생: ${error}`);
+            console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 중 오류 발생: ${error}`);
         }
     }
 
@@ -309,9 +309,9 @@ class TeamsApp extends TeamsActivityHandler {
             await this.createConversationAndContinue(userId, async (context) => {
                 await context.sendActivity({ type: ActivityTypes.Typing });
             });
-            console.log(`사용자 '${userId}'에게 typing indicator 전송 완료.`);
+            console.log(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 typing indicator 전송 완료.`);
         } catch (error) {
-            console.error(`사용자 '${userId}'에게 typing indicator 전송 중 오류 발생: ${error}`);
+            console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 typing indicator 전송 중 오류 발생: ${error}`);
         }
     }
 }
@@ -331,7 +331,6 @@ teamsAppServer.use(restify.plugins.bodyParser());
 function triggerUipathTokenRenewal() {
     setInterval(
         async () => {
-            console.log(`\n[${new Date().toLocaleString()}] UiPath 인증 토큰 갱신 시도 중...`);
             const newToken = await UIPATH.getAccessToken();
             if (newToken) {
                 app.uipathToken = newToken;
@@ -346,7 +345,6 @@ function triggerUipathTokenRenewal() {
 
 async function runProcess(item) {
     const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token);
-    console.log(`  # available runtimes: ${availableRuntimes}`);
 
     if (availableRuntimes >= requiredRuntimes) {  // runtime이 필요한 숫자 이상으로 확보되었을 때에만 실행한다.
         await app.createConversationAndSendMessage(item.id, appMessage2);
@@ -417,11 +415,11 @@ teamsAppServer.listen(appPort, () => {
         app.uipathToken = await UIPATH.getAccessToken();
 
         if (app.uipathToken) {
-            console.log('\nUiPath와의 통신 준비 완료.\n');
+            console.log(`\n[${new Date().toLocaleString()}] UiPath와의 통신 준비 완료.\n`);
             triggerUipathTokenRenewal();
             triggerProcessRun();
         } else {
-            throw new Error('\nUiPath 인증 실패로 인해 에이전트를 시작할 수 없습니다.');
+            throw new Error(`\n[${new Date().toLocaleString()}] UiPath 인증 실패로 인해 에이전트를 시작할 수 없습니다.`);
         }
     })();
 
@@ -429,8 +427,7 @@ teamsAppServer.listen(appPort, () => {
     console.log(`App Password: ${appPassword.substring(0, 8)}...`);
     console.log(`Tenant ID: ${appTenantId}`);
 
-    console.log(`\n[${new Date().toLocaleString()}] Teams App listening to ${teamsAppServer.url}`);
-    console.log('에이전트가 시작됨. Teams에서 메시지를 보내보세요.\n');
+    console.log(`\nTeams App listening to ${teamsAppServer.url}`);
 });
 
 // Teams App 헬스체크 엔드포인트
@@ -451,6 +448,7 @@ teamsAppServer.post('/api/messages', async (req, res) => {
         return;
     }
     */
+    console.log(`\n[${new Date().toLocaleString()}] Teams App 메시지 수신됨.`);
     await adapter.process(req, res, (context) => app.run(context));
 });
 
@@ -465,6 +463,7 @@ teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
     const { userId, message } = req.body;
 
     if (!userId || !message) {
+        console.log(`[${new Date().toLocaleString()}] userId와 message 필드가 필요합니다.`);
         res.send(400, 'userId와 message 필드가 필요합니다.');
         return;
     }
@@ -473,7 +472,7 @@ teamsAppServer.post('/api/sendMessage', apiKeyAuth, async (req, res) => {
         await app.createConversationAndSendMessage(userId, message);
         res.send(`사용자 ${userId}에게 메시지를 보냈습니다.`);
     } catch (err) {
-        console.error('★ 엔드포인트 에러:', err);
+        console.error(`[${new Date().toLocaleString()}] 엔드포인트 에러:`, err);
         res.send(500, '오류 발생');
     }
 });
@@ -482,6 +481,7 @@ teamsAppServer.post('/api/sendTypingIndicator', apiKeyAuth, async (req, res) => 
     const { userId } = req.body;
 
     if (!userId) {
+        console.log(`[${new Date().toLocaleString()}] userId 필드가 필요합니다.`);
         res.send(400, 'userId 필드가 필요합니다.');
         return;
     }
@@ -490,7 +490,7 @@ teamsAppServer.post('/api/sendTypingIndicator', apiKeyAuth, async (req, res) => 
         await app.createConversationAndSendTypingIndicator(userId);
         res.send(`사용자 ${userId}에게 typing indicator를 보냈습니다.`);
     } catch (err) {
-        console.error('★ 엔드포인트 에러:', err);
+        console.error(`[${new Date().toLocaleString()}] 엔드포인트 에러:`, err);
         res.send(500, '오류 발생');
     }
 });
