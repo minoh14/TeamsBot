@@ -297,7 +297,7 @@ class TeamsApp extends TeamsActivityHandler {
                 message.textFormat = textFormat;
                 await context.sendActivity(message);
             });
-            console.log(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 완료.`);
+            console.log(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 완료:\n${text}`);
         } catch (error) {
             console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 중 오류 발생: ${error}`);
         }
