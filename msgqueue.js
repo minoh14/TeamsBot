@@ -91,8 +91,12 @@ class MessageQueue {
 
             axios.post(uipathWebhookUrl, postData, postConfig)
             .then(response => {
-                console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 알림 성공.`);
-                console.log(`   - Status: ${response.status}`);
+                console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 1차 알림 성공.`);
+                return new Promise(resolve => setTimeout(resolve, uipathWebhookRetryAfter * 1000))
+                .then(() => axios.post(uipathWebhookUrl, postData, postConfig))
+                .then(response => {
+                    console.log(`[${new Date().toLocaleString()}] ✅ UiPath Webhook 2차 알림 성공.`);
+                });
             })
             .catch(error => {
                 // 실패할 경우 메시지를 큐에 추가
