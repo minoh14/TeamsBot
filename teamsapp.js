@@ -5,8 +5,6 @@
 // 모듈 불러오기
 const UIPATH = require('./uipath');
 const MSGQUEUE = require('./msgqueue');
-const PROCQUEUE = require('./procqueue')
-const JOBTABLE = require('./jobtable')
 
 // 필요한 패키지: npm install botbuilder restify dotenv @microsoft/microsoft-graph-client
 require('dotenv').config();
@@ -34,7 +32,6 @@ const appType = process.env.MicrosoftAppType || 'SingleTenant';
 const appTenantId = process.env.MicrosoftAppTenantId || '';
 const appPort = process.env.MicrosoftAppPort || 3978;
 const pollingSec = process.env.PollingIntervalSeconds || 3;
-const processTriggerInterval = process.env.ProcessTriggerInterval || 10;
 const processTriggerKeywords = (process.env.ProcessTriggerKeywords || '거래처,거래선').split(',');
 const textFormat = process.env.TextFormat || 'markdown';
 const requiredRuntimes = process.env.RequiredRuntimes || 0;
@@ -42,8 +39,6 @@ const taskOwnerIds = process.env.TaskOwnerIds ? process.env.TaskOwnerIds.split('
 const appMessage1 = process.env.AppMessage1 || '';
 const appMessage2 = process.env.AppMessage2 || '';
 const appMessage3 = process.env.AppMessage3 || '';
-const appMessage4 = process.env.AppMessage4 || '';
-const appMessage5 = process.env.AppMessage5 || '';
 
 // API Key Authentication
 const apiKeyAuth = (req, res, next) => {
@@ -73,20 +68,7 @@ const apiKeyAuth = (req, res, next) => {
         res.send(403, { error: '권한이 없습니다.' });
     }
 };
-/*
-// IP CIDR 허용 범위 (Microsoft Teams 채팅의 IP 범위)
-const allowedCidrs = ['52.112.0.0/14', '52.122.0.0/15'];
 
-function ipToInt(ip) {
-    return ip.split('.').reduce((acc, oct) => (acc * 256 + parseInt(oct)) >>> 0, 0);
-}
-
-function ipInCidr(ip, cidr) {
-    const [range, bits] = cidr.split('/');
-    const mask = (0xFFFFFFFF << (32 - parseInt(bits))) >>> 0;
-    return (ipToInt(ip) & mask) === (ipToInt(range) & mask);
-}
-*/
 // Create adapter
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
     MicrosoftAppId: appId,
@@ -136,24 +118,8 @@ class TeamsApp extends TeamsActivityHandler {
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
             //console.log(`정제 메시지: '${cleanText}'`);
             
-            if (processTriggerKeywords.some(keyword => cleanText.replace(/\s/g, '').toUpperCase().includes(keyword))) {
-
-                // 프로세스 큐에 추가한다.
-                PROCQUEUE.queue.enqueue({
-                    "id": userInfo.id,
-                    "name": userInfo.name,
-                    "email": userInfo.email,
-                    "response": cleanText,
-                    "notified": false  // 사용자에게 알림 발송 여부
-                });
-
-                // 큐를 트리거해준다.
-                tryProcessRun();
-
-            } else {
-                // 메시지 큐에 메시지 추가
-                MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
-            }
+            // 메시지 큐에 메시지 추가
+            MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
 
             await next();
         });
@@ -343,72 +309,6 @@ function triggerUipathTokenRenewal() {
     );
 }
 
-async function runProcess(item) {
-    const availableRuntimes = await UIPATH.getAvailableRuntimes(app.uipathToken.token);
-
-    if (availableRuntimes >= requiredRuntimes) {  // runtime이 필요한 숫자 이상으로 확보되었을 때에만 실행한다.
-        await app.createConversationAndSendMessage(item.id, appMessage2);
-
-        const jobId = await UIPATH.runProcess(
-            app.uipathToken.token,
-            {
-                "g_polling_sec": pollingSec,
-                "g_task_owner_ids": taskOwnerIds,
-                "g_user_info": {
-                    id: item.id,
-                    name: item.name,
-                    email: item.email
-                },
-                "g_user_response": item.response
-            }
-        );
-
-        if (jobId) {
-            JOBTABLE.table.setJob(item.id, jobId);
-        }
-    } else {
-        if (!item.notified) {
-            await app.createConversationAndSendMessage(item.id, appMessage4);
-            item.notified = true;
-        }
-
-        PROCQUEUE.queue.putBack(item);
-    }
-}
-
-async function tryProcessRun() {
-    if (PROCQUEUE.queue.isEmpty()) {
-        return;
-    }
-
-    const item = PROCQUEUE.queue.dequeue();
-    if (item) {
-        const jobId = JOBTABLE.table.getJob(item.id);
-        if (jobId) {
-            const state = await UIPATH.getJobState(app.uipathToken.token, jobId);
-            if (state) {
-                if (['FAULTED', 'SUCCESSFUL', 'STOPPED'].includes(state.toUpperCase())) {
-                    await runProcess(item);
-                } else {
-                    console.log(`Job ${jobId} is in '${state}' state. Not allowed to run a new job.`);
-                    await app.createConversationAndSendMessage(item.id, appMessage5);
-                }
-            } else {  // job의 상태를 얻어오지 못하면 새 job을 실행시켜주기로 한다.
-                console.log(`Job ${jobId} is in UNKNOWN state. Allow running a new job.`);
-                await runProcess(item);
-            }
-        } else {
-            await runProcess(item);
-        }
-    } else {
-        console.log('Something strange...');
-    }
-}
-
-function triggerProcessRun() {
-    setInterval(tryProcessRun, processTriggerInterval * 1000);
-}
-
 // Start Teams App REST server
 teamsAppServer.listen(appPort, () => {
     (async () => {
@@ -417,7 +317,6 @@ teamsAppServer.listen(appPort, () => {
         if (app.uipathToken) {
             console.log(`\n[${new Date().toLocaleString()}] UiPath와의 통신 준비 완료.\n`);
             triggerUipathTokenRenewal();
-            triggerProcessRun();
         } else {
             throw new Error(`\n[${new Date().toLocaleString()}] UiPath 인증 실패로 인해 에이전트를 시작할 수 없습니다.`);
         }
