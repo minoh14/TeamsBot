@@ -93,13 +93,14 @@ class TeamsApp extends TeamsActivityHandler {
         super();
 
         this.uipathToken = null; // UiPath 인증 토큰 (JSON 객체)
-        this.conversationReference = null; // 대화 참조 정보
+        this.conversationReference = this.loadConversationReference();
 
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
             
             // 대화 참조 정보 저장
             this.conversationReference = TurnContext.getConversationReference(context.activity);
+            this.saveConversationReference();
             //console.log(`AAD Object ID: '${context.activity.from.aadObjectId}'`);
 
             // Get user info
@@ -140,6 +141,19 @@ class TeamsApp extends TeamsActivityHandler {
             console.log(`[${new Date().toLocaleString()}] 새 채널 생성: ${channelInfo.name}`);
             await next();
         });
+    }
+
+    loadConversationReference() {
+        try {
+            const data = fs.readFileSync('conversationReference.json', 'utf8');
+            return JSON.parse(data);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    saveConversationReference() {
+        fs.writeFileSync('conversationReference.json', JSON.stringify(this.conversationReference, null, 2));
     }
 
     // Get OAuth token for Microsoft Graph API
@@ -191,7 +205,7 @@ class TeamsApp extends TeamsActivityHandler {
     // Send message to the current user in conversation
     async sendMessageToCurrentUser(text) {
         if (!this.conversationReference) {
-            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보가 없습니다. 메시지를 보낼 수 없습니다.`);
+            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보(conversationReference)가 아직 초기화되지 않았습니다. 메시지를 보낼 수 없습니다.`);
             return;
         }
 

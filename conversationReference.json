@@ -1,0 +1,20 @@
+{
+    "activityId": "1784715222550",
+    "user": {
+        "id": "29:145JPtv53c9NGP2J9hToAzCuWJ62u0r0cMJG4iXCat9jP8ZI2DDLtzJFKILK1GMoOkNAMke7yRQM_PE6p4EptFg",
+        "name": "김대성",
+        "aadObjectId": "28447ac9-3c28-40b6-8a76-4d6a1eec4e3e"
+    },
+    "bot": {
+        "id": "28:2ca3bce5-c3fc-46cd-80b8-31b8131fdaa9",
+        "name": "구매BL선적서류검증송장등록 Agent"
+    },
+    "conversation": {
+        "conversationType": "personal",
+        "tenantId": "5959c21a-9ecb-42dc-8d8a-9c1b67b3b341",
+        "id": "a:1lEUx6JooqW9DWrQI2rhUuPQXh4uQWwkwrOU126VHAu6WvWa_jaabvL296C1RrNKCVEWfABZVL88_5juXrn4LGFU7WexFwF9Lhpvz6XjcofFokaunftlumeW7fZPG_4Q1"
+    },
+    "channelId": "msteams",
+    "locale": "ko-KR",
+    "serviceUrl": "https://smba.trafficmanager.net/kr/5959c21a-9ecb-42dc-8d8a-9c1b67b3b341/"
+}
