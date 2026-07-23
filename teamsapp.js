@@ -103,7 +103,7 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`AAD Object ID: '${context.activity.from.aadObjectId}'`);
 
             // Get user info
-            const userInfo = await this.getUserInfo(context);
+            //const userInfo = await this.getUserInfo(context);
             //console.log(`id: ${userInfo.id}`);
             //console.log(`name: ${userInfo.name}`);
             //console.log(`email: ${userInfo.email}`);
@@ -119,7 +119,7 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`정제 메시지: '${cleanText}'`);
             
             // 메시지 큐에 메시지 추가
-            MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
+            //MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
 
             await next();
         });
