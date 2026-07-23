@@ -224,46 +224,14 @@ class TeamsApp extends TeamsActivityHandler {
     }
 
     async createConversationAndContinue(userId, callback) {
-        const appCredentials = new MicrosoftAppCredentials(
-            appId,
-            appPassword,
-            appTenantId
-        );
-
-        const connectorClient = new ConnectorClient(appCredentials, { baseUri: this.conversationReference.serviceUrl });
-
-        const conversationParameters = {
-            isGroup: false,
-            tenantId: appTenantId,
-            bot: {
-                id: this.conversationReference.bot.id,
-                name: this.conversationReference.bot.name
-            },
-            members: [
-                {
-                    id: userId
-                }
-            ]
-        };
-
-        const response = await connectorClient.conversations.createConversation(conversationParameters);
+        if (!this.conversationReference) {
+            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보(conversationReference)가 아직 초기화되지 않았습니다. 메시지를 보낼 수 없습니다.`);
+            return;
+        }
 
         const convRef = {
-            activityId: response.activityId,
-            channelId: 'msteams',
-            serviceUrl: this.conversationReference.serviceUrl,
-            conversation: {
-                id: response.id,
-                tenantId: appTenantId,
-                conversationType: 'personal'
-            },
-            bot: {
-                id: this.conversationReference.bot.id,
-                name: this.conversationReference.bot.name
-            },
-            user: {
-                id: userId
-            }
+            ...this.conversationReference,
+            user: { id: userId }
         };
 
         await adapter.continueConversationAsync(appId, convRef, callback);
@@ -279,7 +247,10 @@ class TeamsApp extends TeamsActivityHandler {
             });
             console.log(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 완료:\n${text}`);
         } catch (error) {
-            console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 중 오류 발생: ${error}`);
+            console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 메시지 전송 중 오류 발생:`);
+            console.error(`  - Message: ${error.message}`);
+            console.error(`  - Status : ${error.statusCode || error.code}`);
+            if (error.body) console.error(`  - Body   : ${JSON.stringify(error.body)}`);
         }
     }
 
@@ -291,7 +262,10 @@ class TeamsApp extends TeamsActivityHandler {
             });
             console.log(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 typing indicator 전송 완료.`);
         } catch (error) {
-            console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 typing indicator 전송 중 오류 발생: ${error}`);
+            console.error(`[${new Date().toLocaleString()}] 사용자 '${userId}'에게 typing indicator 전송 중 오류 발생:`);
+            console.error(`  - Message: ${error.message}`);
+            console.error(`  - Status : ${error.statusCode || error.code}`);
+            if (error.body) console.error(`  - Body   : ${JSON.stringify(error.body)}`);
         }
     }
 }
