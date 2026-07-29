@@ -229,12 +229,21 @@ class TeamsApp extends TeamsActivityHandler {
             return;
         }
 
-        const convRef = {
-            ...this.conversationReference,
-            user: { id: userId }
+        const conversationParameters = {
+            isGroup: false,
+            tenantId: this.conversationReference.conversation.tenantId,
+            bot: this.conversationReference.bot,
+            members: [{ id: userId }]
         };
 
-        await adapter.continueConversationAsync(appId, convRef, callback);
+        await adapter.createConversationAsync(
+            appId,
+            'msteams',
+            this.conversationReference.serviceUrl,
+            null,
+            conversationParameters,
+            callback
+        );
     }
 
     // Send message to a specific user
