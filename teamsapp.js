@@ -23,6 +23,10 @@ const { ClientSecretCredential } = require('@azure/identity');
 const { ConnectorClient, MicrosoftAppCredentials } = require('botframework-connector');
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
+
+// 대화 참조 정보 저장 파일 (재시작 후 복구용)
+const conversationReferencePath = path.join(__dirname, 'conversationReference.json');
 
 // 환경 변수 (.env 파일에서 관리)
 const teamsAppApiKey = process.env.TeamsAppApiKey || '';
@@ -93,13 +97,14 @@ class TeamsApp extends TeamsActivityHandler {
         super();
 
         this.uipathToken = null; // UiPath 인증 토큰 (JSON 객체)
-        this.conversationReference = null; // 대화 참조 정보
+        this.conversationReference = this.loadConversationReference(); // 대화 참조 정보
 
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
-            
+
             // 대화 참조 정보 저장
             this.conversationReference = TurnContext.getConversationReference(context.activity);
+            this.saveConversationReference();
             //console.log(`AAD Object ID: '${context.activity.from.aadObjectId}'`);
 
             // Get user info
@@ -140,6 +145,28 @@ class TeamsApp extends TeamsActivityHandler {
             console.log(`[${new Date().toLocaleString()}] 새 채널 생성: ${channelInfo.name}`);
             await next();
         });
+    }
+
+    // 재시작 후에도 프로액티브 메시지를 보낼 수 있도록 대화 참조 정보를 복구한다.
+    loadConversationReference() {
+        try {
+            const data = fs.readFileSync(conversationReferencePath, 'utf8');
+            const conversationReference = JSON.parse(data);
+            console.log(`[${new Date().toLocaleString()}] 대화 참조 정보를 복구했습니다.`);
+            return conversationReference;
+        } catch (e) {
+            console.log(`[${new Date().toLocaleString()}] 복구할 대화 참조 정보가 없습니다: ${e.message}`);
+            return null;
+        }
+    }
+
+    saveConversationReference() {
+        try {
+            fs.writeFileSync(conversationReferencePath, JSON.stringify(this.conversationReference, null, 2));
+        } catch (e) {
+            // 저장에 실패해도 메시지 처리는 계속되어야 한다.
+            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보 저장 실패: ${e.message}`);
+        }
     }
 
     // Get OAuth token for Microsoft Graph API
