@@ -145,3 +145,5 @@ key.pem
 
 # MAC
 .DS_Store
+
+conversationReference.json
