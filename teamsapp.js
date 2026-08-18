@@ -93,18 +93,17 @@ class TeamsApp extends TeamsActivityHandler {
         super();
 
         this.uipathToken = null; // UiPath 인증 토큰 (JSON 객체)
-        this.conversationReference = this.loadConversationReference();
+        this.conversationReference = null; // 대화 참조 정보
 
         // 메시지 수신 핸들러
         this.onMessage(async (context, next) => {
             
             // 대화 참조 정보 저장
             this.conversationReference = TurnContext.getConversationReference(context.activity);
-            this.saveConversationReference();
             //console.log(`AAD Object ID: '${context.activity.from.aadObjectId}'`);
 
             // Get user info
-            //const userInfo = await this.getUserInfo(context);
+            const userInfo = await this.getUserInfo(context);
             //console.log(`id: ${userInfo.id}`);
             //console.log(`name: ${userInfo.name}`);
             //console.log(`email: ${userInfo.email}`);
@@ -120,7 +119,7 @@ class TeamsApp extends TeamsActivityHandler {
             //console.log(`정제 메시지: '${cleanText}'`);
             
             // 메시지 큐에 메시지 추가
-            //MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
+            MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
 
             await next();
         });
@@ -141,19 +140,6 @@ class TeamsApp extends TeamsActivityHandler {
             console.log(`[${new Date().toLocaleString()}] 새 채널 생성: ${channelInfo.name}`);
             await next();
         });
-    }
-
-    loadConversationReference() {
-        try {
-            const data = fs.readFileSync('conversationReference.json', 'utf8');
-            return JSON.parse(data);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    saveConversationReference() {
-        fs.writeFileSync('conversationReference.json', JSON.stringify(this.conversationReference, null, 2));
     }
 
     // Get OAuth token for Microsoft Graph API
@@ -205,7 +191,7 @@ class TeamsApp extends TeamsActivityHandler {
     // Send message to the current user in conversation
     async sendMessageToCurrentUser(text) {
         if (!this.conversationReference) {
-            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보(conversationReference)가 아직 초기화되지 않았습니다. 메시지를 보낼 수 없습니다.`);
+            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보가 없습니다. 메시지를 보낼 수 없습니다.`);
             return;
         }
 
@@ -224,26 +210,49 @@ class TeamsApp extends TeamsActivityHandler {
     }
 
     async createConversationAndContinue(userId, callback) {
-        if (!this.conversationReference) {
-            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보(conversationReference)가 아직 초기화되지 않았습니다. 메시지를 보낼 수 없습니다.`);
-            return;
-        }
+        const appCredentials = new MicrosoftAppCredentials(
+            appId,
+            appPassword,
+            appTenantId
+        );
+
+        const connectorClient = new ConnectorClient(appCredentials, { baseUri: this.conversationReference.serviceUrl });
 
         const conversationParameters = {
             isGroup: false,
-            tenantId: this.conversationReference.conversation.tenantId,
-            bot: this.conversationReference.bot,
-            members: [{ id: userId }]
+            tenantId: appTenantId,
+            bot: {
+                id: this.conversationReference.bot.id,
+                name: this.conversationReference.bot.name
+            },
+            members: [
+                {
+                    id: userId
+                }
+            ]
         };
 
-        await adapter.createConversationAsync(
-            appId,
-            'msteams',
-            this.conversationReference.serviceUrl,
-            null,
-            conversationParameters,
-            callback
-        );
+        const response = await connectorClient.conversations.createConversation(conversationParameters);
+
+        const convRef = {
+            activityId: response.activityId,
+            channelId: 'msteams',
+            serviceUrl: this.conversationReference.serviceUrl,
+            conversation: {
+                id: response.id,
+                tenantId: appTenantId,
+                conversationType: 'personal'
+            },
+            bot: {
+                id: this.conversationReference.bot.id,
+                name: this.conversationReference.bot.name
+            },
+            user: {
+                id: userId
+            }
+        };
+
+        await adapter.continueConversationAsync(appId, convRef, callback);
     }
 
     // Send message to a specific user
