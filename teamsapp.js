@@ -143,9 +143,11 @@ class TeamsApp extends TeamsActivityHandler {
     }
 
     // Get OAuth token for Microsoft Graph API
-    async getGraphToken() {
+    async getGraphToken(tenantId) {
+        const targetTenantId = tenantId || appTenantId;
+
         const credential = new ClientSecretCredential(
-            appTenantId,
+            targetTenantId,
             appId,
             appPassword
         );
@@ -157,7 +159,7 @@ class TeamsApp extends TeamsActivityHandler {
 
             return tokenResponse.token;
         } catch (error) {
-            console.error(`[${new Date().toLocaleString()}] Graph 토큰을 가져오는 중 오류 발생: ${error.message}`);
+            console.error(`[${new Date().toLocaleString()}] 테넌트 '${targetTenantId}'의 Graph 토큰을 가져오는 중 오류 발생: ${error.message}`);
             throw error;
         }
     }
@@ -165,27 +167,50 @@ class TeamsApp extends TeamsActivityHandler {
     // Get user info
     async getUserInfo(context) {
 
-        const token = await this.getGraphToken();
+        const aadObjectId = context.activity.from.aadObjectId;
 
-        const client = Client.init({
-            authProvider: (done) => {
-                done(null, token);
+        // 메시지가 발생한 테넌트를 우선 사용 (.env의 MicrosoftAppTenantId와 다를 수 있음)
+        const tenantId = context.activity.conversation?.tenantId
+            || context.activity.channelData?.tenant?.id
+            || appTenantId;
+
+        try {
+            if (!aadObjectId) {
+                throw new Error('activity.from.aadObjectId가 없습니다.');
             }
-        });
 
-        const user = await client
-            .api(`/users/${context.activity.from.aadObjectId}`)
-            .select('id,displayName,mail,userPrincipalName,department,jobTitle,officeLocation')
-            .get();
-        
-        return {
-            id: user.id,
-            name: user.displayName,
-            email: user.mail || user.userPrincipalName,
-            //department: user.department,
-            //jobTitle: user.jobTitle,
-            //officeLocation: user.officeLocation
-        };
+            const token = await this.getGraphToken(tenantId);
+
+            const client = Client.init({
+                authProvider: (done) => {
+                    done(null, token);
+                }
+            });
+
+            const user = await client
+                .api(`/users/${aadObjectId}`)
+                .select('id,displayName,mail,userPrincipalName,department,jobTitle,officeLocation')
+                .get();
+
+            return {
+                id: user.id,
+                name: user.displayName,
+                email: user.mail || user.userPrincipalName,
+                //department: user.department,
+                //jobTitle: user.jobTitle,
+                //officeLocation: user.officeLocation
+            };
+        } catch (error) {
+            // Graph 조회에 실패해도 메시지 처리는 계속되어야 하므로 activity 정보로 대체
+            console.error(`[${new Date().toLocaleString()}] Graph 사용자 조회 실패 (tenant: '${tenantId}', id: '${aadObjectId}'): ${error.message}`);
+            console.error(`[${new Date().toLocaleString()}] activity 정보로 대체하여 계속 진행합니다.`);
+
+            return {
+                id: aadObjectId || context.activity.from.id,
+                name: context.activity.from.name,
+                email: null
+            };
+        }
     }
 
     // Send message to the current user in conversation
@@ -210,6 +235,16 @@ class TeamsApp extends TeamsActivityHandler {
     }
 
     async createConversationAndContinue(userId, callback) {
+        if (!this.conversationReference) {
+            console.error(`[${new Date().toLocaleString()}] 대화 참조 정보가 없습니다. 메시지를 보낼 수 없습니다.`);
+            return;
+        }
+
+        // 대화를 생성할 테넌트는 사용자가 속한 테넌트여야 한다.
+        // MultiTenant 모드에서는 appTenantId가 비어 있으므로 대화 참조 정보에서 가져온다.
+        const conversationTenantId = this.conversationReference.conversation?.tenantId || appTenantId;
+
+        // MultiTenant 모드에서는 tenant를 비워 botframework.com 테넌트로 인증한다.
         const appCredentials = new MicrosoftAppCredentials(
             appId,
             appPassword,
@@ -220,7 +255,7 @@ class TeamsApp extends TeamsActivityHandler {
 
         const conversationParameters = {
             isGroup: false,
-            tenantId: appTenantId,
+            tenantId: conversationTenantId,
             bot: {
                 id: this.conversationReference.bot.id,
                 name: this.conversationReference.bot.name
@@ -240,7 +275,7 @@ class TeamsApp extends TeamsActivityHandler {
             serviceUrl: this.conversationReference.serviceUrl,
             conversation: {
                 id: response.id,
-                tenantId: appTenantId,
+                tenantId: conversationTenantId,
                 conversationType: 'personal'
             },
             bot: {
