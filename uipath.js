@@ -79,6 +79,61 @@ async function getAccessToken() {
     }
 }
 
+// UiPath 프로세스 실행 함수
+async function runProcess(token, inputArguments) {
+
+    if (!token) {
+        console.error('UiPath 인증 토큰이 없습니다. 프로세스를 실행할 수 없습니다.');
+        return null;
+    }
+
+    const apiUrl = `${uipathBaseURL}/${uipathOrganizationName}/${uipathTenantName}/odata/Jobs/UiPath.Server.Configuration.OData.StartJobs`;
+
+    const jobPayload = {
+        startInfo: {
+            'ReleaseName': uipathProcessName,
+            'Strategy': 'JobsCount',
+            'JobsCount': 1,
+            'InputArguments': JSON.stringify(inputArguments)
+        }
+    };
+
+    try {
+
+        const response = await axios.post(apiUrl, jobPayload, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-UIPATH-OrganizationUnitId': uipathFolderId
+            }
+        });
+
+        console.log(`[${new Date().toLocaleString()}] ✅ UiPath 프로세스 실행 성공.`);
+        console.log(`   - Status: ${response.status}`);
+        console.log(`   - Job ID: ${response.data.value[0].Id}`);
+        return response.data;
+
+    } catch (error) {
+
+        console.error('❌ UiPath 프로세스 실행 실패:');
+
+        if (error.response) {
+            // 서버가 에러 응답을 반환한 경우 (e.g., 400, 401, 403)
+            console.error(`   - Status: ${error.response.status}`);
+            console.error(`   - Data: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+            // 요청이 전송되었으나 응답을 받지 못한 경우 (네트워크 오류 등)
+            console.error('   - Error: No response received from UiPath API.');
+        } else {
+            // 요청 설정 중 오류가 발생한 경우
+            console.error(`   - Error: ${error.message}`);
+        }
+
+        return null;
+    }
+}
+
 module.exports = {
-    getAccessToken
+    getAccessToken,
+    runProcess
 };
