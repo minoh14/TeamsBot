@@ -123,16 +123,22 @@ class TeamsApp extends TeamsActivityHandler {
             const cleanText = removedMentionText ? removedMentionText.trim() : text;
             //console.log(`정제 메시지: '${cleanText}'`);
             
-            // 메시지 큐에 메시지 추가
-            //MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
-            // 메시지 큐에 추가하는 대신 프로세스를 실행하여 처리함
-            UIPATH.runProcess(
-                this.uipathToken.token,
-                {
-                    "g_user_id": userInfo.id,
-                    "g_message": cleanText
-                }
-            );
+            if (processTriggerKeywords.some(keyword => cleanText.replace(/\s/g, '').toUpperCase().includes(keyword))) {
+                await app.createConversationAndSendMessage(userInfo.id, appMessage1);
+
+                // 메시지 큐에 메시지 추가
+                //MSGQUEUE.msgQueue.enqueue(userInfo.id, cleanText);
+                // 메시지 큐에 추가하는 대신 프로세스를 실행하여 처리함
+                UIPATH.runProcess(
+                    this.uipathToken.token,
+                    {
+                        "g_user_id": userInfo.id,
+                        "g_message": cleanText
+                    }
+                );
+            } else {
+                await app.createConversationAndSendMessage(userInfo.id, appMessage2);
+            }
 
             await next();
         });
